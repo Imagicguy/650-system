@@ -6,7 +6,7 @@
 block dummy = {0, 0, NULL, NULL, NULL, NULL};
 block *head = &dummy;
 block *tail = &dummy;
-// size_t count = 0;
+size_t count = 0;
 unsigned long get_data_segment_size() {
   block *curBlock = head;
   unsigned long totalSize = 0;
@@ -108,7 +108,7 @@ void mergeBlock(block *currBlock, int index) {
 }
 
 void cutBlock(block *parentBlock, size_t requiredSize) {
-  if (parentBlock->size - requiredSize < sizeof(block) + 11) {
+  if (parentBlock->size - requiredSize < sizeof(block) + 2) {
     blockDelete(parentBlock);
     return;
   }
@@ -143,6 +143,9 @@ void cutBlock(block *parentBlock, size_t requiredSize) {
   if (parentBlock == NULL) {
     printf("Ohops,parent is nothing!\n");
   }
+  if (parentBlock->prev == NULL) {
+    printf("pro2\n");
+  }
   newBlock->prev = parentBlock;
   newBlock->next = parentBlock->next;
 
@@ -160,6 +163,7 @@ void cutBlock(block *parentBlock, size_t requiredSize) {
   //  ",free_next %d\n",
   //  newBlock->size, newBlock->isFreed, newBlock->prev, newBlock->next,
   //  newBlock->free_prev, newBlock->free_next);
+  // printf("newBlock in cut prev->prev is %d\n", newBlock->prev->prev);
   return;
 }
 
@@ -182,7 +186,8 @@ void *ff_malloc(size_t size) {
       currBlock->isFreed = 0;
 
       cutBlock(currBlock, size);
-
+      // printf("newBlock out cut prev prev is %d\n",
+      // currBlock->next->prev->prev);
       return currBlock + 1;
     }
 
@@ -196,6 +201,9 @@ void *ff_malloc(size_t size) {
   // if failed to find suitable block,use sbrk() to create new block for this
   // malloc request
   size_t alloc_size = size + sizeof(block);
+  if (currBlock == (void *)-1) {
+    return NULL;
+  }
   currBlock = sbrk(alloc_size);
   currBlock->isFreed = 0;
   currBlock->size = size;
@@ -254,6 +262,9 @@ void *bf_malloc(size_t size) {
   // printf("cant cut\n");
   size_t alloc_size = size + sizeof(block);
   currBlock = sbrk(alloc_size);
+  if (currBlock == (void *)-1) {
+    return NULL;
+  }
   currBlock->isFreed = 0;
   currBlock->size = size;
   // printf("currBlock is %d its size is %d, sizeof(block) is %d\n", currBlock,
@@ -269,20 +280,25 @@ void *bf_malloc(size_t size) {
 
 void general_free(void *ptr) {
   //  printf("begin to free!\n");
-  block *currBlock = (void *)(ptr - sizeof(block));
+  block *currBlock = (block *)ptr - 1;
+
   currBlock->isFreed = 1;
 
   currBlock->free_next = NULL;
   currBlock->free_prev = NULL;
   blockAdd(currBlock);
-
+  if (currBlock->prev == NULL) {
+    printf("pro1\n");
+  }
   if (currBlock->prev && currBlock->prev->isFreed) {
     mergeBlock(currBlock, -1);
 
     // printf("-1 merge done\n");
   }
-  if (currBlock->next && currBlock->next->isFreed) {
-    mergeBlock(currBlock, 1);
+  if (currBlock->next) {
+    if (currBlock->next->isFreed) {
+      mergeBlock(currBlock, 1);
+    }
   }
   return;
 }
