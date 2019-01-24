@@ -6,14 +6,8 @@
 #define NUM_ITERS 100
 #define NUM_ITEMS 10000
 
-#ifdef FF
-#define MALLOC(sz) ff_malloc(sz)
-#define FREE(p) ff_free(p)
-#endif
-#ifdef BF
 #define MALLOC(sz) bf_malloc(sz)
 #define FREE(p) bf_free(p)
-#endif
 
 double calc_time(struct timespec start, struct timespec end) {
   double start_sec =
