@@ -78,8 +78,8 @@ void mergeBlock(block *currBlock, int index) {
     if (currBlock->next != NULL) {
       currBlock->next->prev = currBlock;
     }
-    currBlock->next->prev = NULL;
-    currBlock->next->next = NULL;
+    // currBlock->next->prev = NULL;
+    // currBlock->next->next = NULL;
   }
 }
 
@@ -217,11 +217,9 @@ void general_free(void *ptr) {
 
   if (currBlock->prev && currBlock->prev->isFreed) {
     mergeBlock(currBlock, -1);
-    return;
   }
   if (currBlock->next && currBlock->next->isFreed) {
     mergeBlock(currBlock, 1);
-    return;
   }
   return;
 }
