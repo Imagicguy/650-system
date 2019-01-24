@@ -6,7 +6,7 @@
 block dummy = {0, 0, NULL, NULL, NULL, NULL};
 block *head = &dummy;
 block *tail = &dummy;
-size_t count = 0;
+// size_t count = 0;
 unsigned long get_data_segment_size() {
   block *curBlock = head;
   unsigned long totalSize = 0;
@@ -31,9 +31,10 @@ void blockDelete(block *currBlock) {
   //     "%d,free_next % d\n ",
   //     currBlock->size, currBlock->isFreed, currBlock->prev, currBlock->next,
   //     currBlock->free_prev, currBlock->free_next);
-  count--;
+  // count--;
   //  printf("free list length: %d\n", count);
   currBlock->isFreed = 0;
+
   if (currBlock->free_next != NULL) {
 
     currBlock->free_next->free_prev = currBlock->free_prev;
@@ -43,6 +44,7 @@ void blockDelete(block *currBlock) {
 
     currBlock->free_prev->free_next = currBlock->free_next;
   }
+
   // printf("after DElete size %d isfree %d ,prev %d ,next %d ,free_prev %d "
   //     ",free_next %d\n",
   //     currBlock->size, currBlock->isFreed, currBlock->prev, currBlock->next,
@@ -60,7 +62,7 @@ void blockAdd(block *newFreeBlock) {
   // if (newFreeBlock->prev == NULL) {
   // printf("error: prev pointer lost\n");
   //}
-  count++;
+  // count++;
   // printf("free list length: %d\n", count);
   if (head->free_next == NULL) {
     head->free_next = newFreeBlock;
@@ -105,10 +107,10 @@ void mergeBlock(block *currBlock, int index) {
   }
 }
 
-block *cutBlock(block *parentBlock, size_t requiredSize) {
-  if (parentBlock->size - requiredSize < sizeof(block) + 2) {
+void cutBlock(block *parentBlock, size_t requiredSize) {
+  if (parentBlock->size - requiredSize < sizeof(block) + 11) {
     blockDelete(parentBlock);
-    return parentBlock + 1;
+    return;
   }
   // printf("before cut parent is : size %d   isfree %d ,prev %d ,next %d "
   //     ",free_prev %d "
@@ -122,17 +124,25 @@ block *cutBlock(block *parentBlock, size_t requiredSize) {
   newBlock->free_next = NULL;
   newBlock->free_prev = NULL;
   newBlock->isFreed = 1;
+  if (newBlock->size <= 0) {
+    printf("size is %d\n", newBlock->size);
+  }
+
   // printf("generate cut child is : size %d  isfree %d ,prev %d ,next %d "
   //     ",free_prev %d "
   //     ",free_next %d\n",
-  //     newBlock->size, newBlock->isFreed, newBlock->prev, newBlock->next,
-  //     newBlock->free_prev, newBlock->free_next);
-  newBlock->size = parentBlock->size - requiredSize - sizeof(block);
+  ///     newBlock->size, newBlock->isFreed, newBlock->prev, newBlock->next,
+  //    newBlock->free_prev, newBlock->free_next);
+  // newBlock->size = parentBlock->size - requiredSize - sizeof(block);
+  blockDelete(parentBlock);
   blockAdd(newBlock);
-  blockDelete(parentBlock); // delete parentblock
+  // delete parentblock
 
   parentBlock->size = requiredSize;
-  newBlock->isFreed = 1;
+  // newBlock->isFreed = 1;
+  if (parentBlock == NULL) {
+    printf("Ohops,parent is nothing!\n");
+  }
   newBlock->prev = parentBlock;
   newBlock->next = parentBlock->next;
 
@@ -150,7 +160,7 @@ block *cutBlock(block *parentBlock, size_t requiredSize) {
   //  ",free_next %d\n",
   //  newBlock->size, newBlock->isFreed, newBlock->prev, newBlock->next,
   //  newBlock->free_prev, newBlock->free_next);
-  return parentBlock + 1;
+  return;
 }
 
 void *ff_malloc(size_t size) {
@@ -206,19 +216,19 @@ void *bf_malloc(size_t size) {
   if (size == 0) {
     return NULL;
   } // return  NULL if the request size is 0
-  block *currBlock, *diffBlock = NULL;
+  block *currBlock, *diffBlock = &dummy;
 
   currBlock = head;
   size_t difference = INT_MAX;
   while (currBlock != NULL) {
     // printf("freeprev:%d freenext: %d\n", currBlock->free_prev,
     //     currBlock->free_next);
-    if (currBlock->isFreed && currBlock->size == size) {
+    if (currBlock->size == size) {
       currBlock->isFreed = 0;
       blockDelete(currBlock);
       return currBlock + 1;
     }
-    if (currBlock->isFreed && currBlock->size > size) {
+    if (currBlock->size > size) {
       size_t curDifference = currBlock->size - size;
       if (curDifference > 0 && curDifference < difference) {
         difference = curDifference;
@@ -262,19 +272,19 @@ void general_free(void *ptr) {
   block *currBlock = (void *)(ptr - sizeof(block));
   currBlock->isFreed = 1;
 
-  // currBlock->free_next = NULL;
-  // currBlock->free_prev = NULL;
+  currBlock->free_next = NULL;
+  currBlock->free_prev = NULL;
   blockAdd(currBlock);
 
   if (currBlock->prev && currBlock->prev->isFreed) {
     mergeBlock(currBlock, -1);
+
     // printf("-1 merge done\n");
-    return;
   }
   if (currBlock->next && currBlock->next->isFreed) {
     mergeBlock(currBlock, 1);
-    return;
   }
+  return;
 }
 void ff_free(void *ptr) { general_free(ptr); }
 

@@ -2,11 +2,11 @@
 #include <stdlib.h>
 
 int main() { // 13k
-  // char *string1 = (char *)ff_malloc(8);
-  // ff_free(string1);
-  // char *string4 = (char *)ff_malloc(5);
+  char *string1 = (char *)ff_malloc(8);
+  ff_free(string1);
+  char *string4 = (char *)ff_malloc(5);
 
-  // ff_free(string4);
+  ff_free(string4);
   char *string2 = (char *)ff_malloc(3);
   ff_free(string2);
   char *string3 = (char *)ff_malloc(10);

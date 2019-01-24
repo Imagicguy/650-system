@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define NUM_ITERS 100
-#define NUM_ITEMS 10000
+#define NUM_ITERS 10
+#define NUM_ITEMS 1000
 
 #ifdef FF
 #define MALLOC(sz) ff_malloc(sz)
@@ -85,9 +85,8 @@ int main(int argc, char *argv[]) {
         malloc_items[1 - malloc_set][j + k].address =
             (int *)MALLOC(malloc_items[1 - malloc_set][j + k].bytes);
       } // for k
-      //      printf("%d\n", j);
-    } // for j
-    // printf("%d\n", i);
+    }   // for j
+
   } // for i
 
   // Stop Time
