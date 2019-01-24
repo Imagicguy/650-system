@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   } // for i
 
   // Start Time
-
+  printf("start free\n");
   clock_gettime(CLOCK_MONOTONIC, &start_time);
   printf("before free it is good !\n");
   for (i = 0; i < NUM_ITERS; i++) {
@@ -85,13 +85,15 @@ int main(int argc, char *argv[]) {
         malloc_items[1 - malloc_set][j + k].address =
             (int *)MALLOC(malloc_items[1 - malloc_set][j + k].bytes);
       } // for k
-    }   // for j
-
+      //      printf("%d\n", j);
+    } // for j
+    // printf("%d\n", i);
   } // for i
 
   // Stop Time
+  // printf("gettime\n");
   clock_gettime(CLOCK_MONOTONIC, &end_time);
-  printf("start to counting time!\n");
+  // printf("start to counting time!\n");
   data_segment_size = get_data_segment_size();
   data_segment_free_space = get_data_segment_free_space_size();
   printf("data_segment_size = %lu, data_segment_free_space = %lu\n",
