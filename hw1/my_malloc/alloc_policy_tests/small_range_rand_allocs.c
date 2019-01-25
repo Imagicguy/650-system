@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
             (int *)MALLOC(malloc_items[1 - malloc_set][j + k].bytes);
       } // for k
     }   // for j
-    printf("%d\n", i);
+    //    printf("%d\n", i);
   } // for i
 
   // Stop Time
