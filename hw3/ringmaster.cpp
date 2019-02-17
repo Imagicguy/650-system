@@ -1,3 +1,4 @@
+#include "potato.h"
 #include <cstring>
 #include <iostream>
 #include <netdb.h>
@@ -6,23 +7,31 @@
 #include <unistd.h>
 using namespace std;
 
+in_port_t get_in_port(struct sockaddr *sa) {
+  if (sa->sa_family == AF_INET) {
+    return (((struct sockaddr_in *)sa)->sin_port);
+  }
+
+  return (((struct sockaddr_in6 *)sa)->sin6_port);
+}
+
 int main(int argc, char *argv[]) {
   // argv[1] = port_num
   // argv[2] = num_players
   // argv[3] = num_hops
-  if (argc != 3) {
+  if (argc != 4) {
     cout << "invalid input!" << endl;
     return -1;
   }
-  int port_num = *argv[1];
-  int num_players = *argv[2];
-  int num_hops = *argv[3];
-  const char *hostname = NULL;
-  const char *port = "4444";
+
+  int num_players = atoi(argv[2]);
+  int num_hops = atoi(argv[1]);
   int status;
   int socket_fd;
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
+  const char *hostname = NULL;
+  const char *port = argv[1];
 
   memset(&host_info, 0, sizeof(host_info));
 
@@ -62,15 +71,26 @@ int main(int argc, char *argv[]) {
   } // if
 
   cout << "Waiting for connection on port " << port << endl;
-  struct sockaddr_storage socket_addr;
-  socklen_t socket_addr_len = sizeof(socket_addr);
-  int client_connection_fd[num_players];
-  int currPlayer = 0;
-  while (currPlayer < num_players) {
-    client_connection_fd[currPlayer] =
-        accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
-    cout << "I got " << currPlayer << " players" << endl;
+  struct sockaddr_storage socket_addr[num_players];
+  socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
+  int sockets_fd[num_players];
+  int curr = 0;
+
+  while (curr < num_players) {
+    sockets_fd[curr] = accept(socket_fd, (struct sockaddr *)&socket_addr[curr],
+                              &socket_addr_len);
+
+    if (sockets_fd[curr] == -1) {
+      cerr << "Error: cannot accept connection on socket" << endl;
+      return -1;
+    }
+    in_port_t port_num = get_in_port((struct sockaddr *)&socket_addr[curr]);
+    void *msg = &port_num;
+    send(sockets_fd[curr], msg, 9, 0);
+    cout << "Player " << curr << " is ready to play" << endl;
+    curr++;
   }
+  cout << "All player are ready!" << endl;
 
   return 0;
 }

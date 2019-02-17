@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
   const char *hostname = NULL;
-  const char *port = "4444";
+  const char *port = argv[1];
 
   memset(&host_info, 0, sizeof(host_info));
 
