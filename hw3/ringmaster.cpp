@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     string str2(portArr);
     playerInfo[curr] = str1 + " " + str2;
     void *msg = portArr;
-    send(sockets_fd[curr], msg, 9, 0);
+    send(sockets_fd[curr], msg, 512, 0);
     cout << "Player " << curr << " is ready to play" << endl;
     curr++;
   }
