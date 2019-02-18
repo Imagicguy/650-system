@@ -63,9 +63,59 @@ int main(int argc, char *argv[]) {
   const char *my_port = (char *)buffer;
   cout << "OH I KNOW MY PORT IS " << my_port << endl;
 
+  // start second socket -- server
+
+  struct addrinfo host_info_2;
+  struct addrinfo *host_info_list_2;
+  const char *hostname_2 = NULL;
+  int port_num = atoi(my_port) + (atoi(my_port) % 10) * 7;
+  const char *port_2 = to_string(port_num).c_str();
+  memset(&host_info_2, 0, sizeof(host_info_2));
+
+  host_info_2.ai_family = AF_UNSPEC;
+  host_info_2.ai_socktype = SOCK_STREAM;
+  host_info_2.ai_flags = AI_PASSIVE;
+
+  status = getaddrinfo(hostname_2, port_2, &host_info_2, &host_info_list_2);
+  if (status != 0) {
+    cerr << "ERROR: cannot addrinfo, error number: " << errno << endl;
+    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
+    return -1;
+  } // if
+  cout << "1 " << hostname_2 << endl;
+  cout << "2 " << port_2 << endl;
+  socket_fd[1] =
+      socket(host_info_list_2->ai_family, host_info_list_2->ai_socktype,
+             host_info_list_2->ai_protocol);
+  if (socket_fd[1] == -1) {
+    cerr << "Error: cannot create socket" << endl;
+    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
+    return -1;
+  } // if
+  cout << "before bind ,player has hostname " << hostname_2 << " and " << port_2
+       << endl;
+  int yes = 1;
+  status =
+      setsockopt(socket_fd[1], SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+  status = bind(socket_fd[1], host_info_list_2->ai_addr,
+                host_info_list_2->ai_addrlen);
+  if (status == -1) {
+    cerr << "ERROR: cannot bind, error number: " << errno << endl;
+    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
+    return -1;
+  } // if
+
+  status = listen(socket_fd[1], 100);
+  if (status == -1) {
+    cerr << "Error: cannot listen on socket" << endl;
+    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
+    return -1;
+  } // if
+
+  cout << "Waiting for connection on port " << port_2 << endl;
+
   char buffer1[512];
   recv(socket_fd[0], buffer1, 512, 0);
-  cout << "I have neighbor at " << buffer1 << endl;
   string neighborInfo(buffer1);
   size_t segment = neighborInfo.find(" ");
   const char *neigh_host = neighborInfo.substr(0, segment).c_str();
@@ -113,56 +163,6 @@ int main(int argc, char *argv[]) {
   } else {
     cout << "connection succeed!" << endl;
   }
-
-  // start second socket -- server
-
-  struct addrinfo host_info_2;
-  struct addrinfo *host_info_list_2;
-  const char *hostname_2 = NULL;
-  int port_num = atoi(my_port) + (atoi(my_port) % 10) * 7;
-  const char *port_2 = to_string(port_num).c_str();
-  memset(&host_info_2, 0, sizeof(host_info_2));
-
-  host_info_2.ai_family = AF_UNSPEC;
-  host_info_2.ai_socktype = SOCK_STREAM;
-  host_info_2.ai_flags = AI_PASSIVE;
-
-  status = getaddrinfo(hostname_2, port_2, &host_info_2, &host_info_list_2);
-  if (status != 0) {
-    cerr << "ERROR: cannot addrinfo, error number: " << errno << endl;
-    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
-    return -1;
-  } // if
-  cout << "1 " << hostname_2 << endl;
-  cout << "2 " << port_2 << endl;
-  socket_fd[1] =
-      socket(host_info_list_2->ai_family, host_info_list_2->ai_socktype,
-             host_info_list_2->ai_protocol);
-  if (socket_fd[1] == -1) {
-    cerr << "Error: cannot create socket" << endl;
-    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
-    return -1;
-  } // if
-
-  int yes = 1;
-  status =
-      setsockopt(socket_fd[1], SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-  status = bind(socket_fd[1], host_info_list_2->ai_addr,
-                host_info_list_2->ai_addrlen);
-  if (status == -1) {
-    cerr << "ERROR: cannot bind, error number: " << errno << endl;
-    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
-    return -1;
-  } // if
-
-  status = listen(socket_fd[1], 100);
-  if (status == -1) {
-    cerr << "Error: cannot listen on socket" << endl;
-    cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
-    return -1;
-  } // if
-
-  cout << "Waiting for connection on port " << port_2 << endl;
 
   freeaddrinfo(host_info_list);
   freeaddrinfo(host_info_list_2);
