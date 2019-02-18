@@ -77,8 +77,7 @@ int main(int argc, char *argv[]) {
   }
 
   char *hostname_2 = inet_ntoa(*((struct in_addr *)aka->h_addr_list[0]));
-  const char *port_2 = "10000";
-  int offset = 0;
+  int port2 = 10000;
   memset(&host_info_2, 0, sizeof(host_info_2));
 
   host_info_2.ai_family = AF_UNSPEC;
@@ -86,10 +85,12 @@ int main(int argc, char *argv[]) {
   host_info_2.ai_flags = AI_PASSIVE;
 
   while (true) {
-    status = getaddrinfo(hostname_2, port_2, &host_info_2, &host_info_list_2);
+    status = getaddrinfo(hostname_2, to_string(port2).c_str(), &host_info_2,
+                         &host_info_list_2);
     if (status != 0) {
       cerr << "ERROR: cannot addrinfo, error number: " << errno << endl;
-      cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
+      cerr << "  (" << hostname_2 << "," << to_string(port2).c_str() << ")"
+           << endl;
       return -1;
     } // if
 
@@ -98,30 +99,33 @@ int main(int argc, char *argv[]) {
                host_info_list_2->ai_protocol);
     if (socket_fd[1] == -1) {
       cerr << "Error: cannot create socket" << endl;
-      cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
+      cerr << "  (" << hostname_2 << "," << to_string(port2).c_str() << ")"
+           << endl;
       return -1;
     } // if
-    int yes = 1;
+    int yes = 0;
     status =
         setsockopt(socket_fd[1], SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
     status = bind(socket_fd[1], host_info_list_2->ai_addr,
                   host_info_list_2->ai_addrlen);
     if (status == -1) {
       // cerr << "ERROR: cannot bind, error number: " << endl;
-      port_2 = to_string(atoi(port_2) + 1).c_str();
-      offset++;
+      port2++;
     } else {
-      cout << "bind succeed,port is " << port_2 << endl;
+      cout << "bind succeed,port is " << to_string(port2).c_str() << endl;
       break;
     }
   }
-  port_2 = to_string(atoi(port_2) + offset).c_str();
+  const char *port_2 = to_string(port2).c_str();
   status = listen(socket_fd[1], 100);
   if (status == -1) {
     cerr << "Error: cannot listen on socket" << endl;
     cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
     return -1;
   } // if
+
+  cout << "host is " << hostname_2 << endl;
+  cout << "Waiting for connection on port " << port_2 << endl;
 
   // connection succeed with master
   char buffer[512];
@@ -138,16 +142,14 @@ int main(int argc, char *argv[]) {
   //  send server info to master
   string str1(hostname_2);
   string str2(port_2);
+  cout << "host is " << hostname_2 << endl;
+  cout << "Waiting for connection on port " << port_2 << endl;
   string my_server_info = str1 + " " + str2;
   const char *msgs = my_server_info.c_str();
 
-  cout << "host is " << hostname_2 << endl;
-  cout << "Waiting for connection on port " << port_2 << endl;
-
   send(socket_fd[0], msgs, 512, 0);
   // cout << "here?" << endl;
-  cout << "host is " << hostname_2 << endl;
-  cout << "Waiting for connection on port " << port_2 << endl;
+
   // get neighbor info from master
   char buffer1[512];
   recv(socket_fd[0], buffer1, 512, 0);
