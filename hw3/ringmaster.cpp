@@ -71,26 +71,41 @@ int main(int argc, char *argv[]) {
   } // if
 
   cout << "Waiting for connection on port " << port << endl;
-  struct sockaddr_storage socket_addr[num_players];
-  socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
-  int sockets_fd[num_players];
-  int curr = 0;
 
+  struct sockaddr_storage socket_addr;
+  socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
+  int sockets_fd[num_players + 1];
+  int curr = 0;
+  char hostArr[NI_MAXHOST];
+  char portArr[NI_MAXSERV];
+  string playerInfo[num_players];
   while (curr < num_players) {
-    sockets_fd[curr] = accept(socket_fd, (struct sockaddr *)&socket_addr[curr],
-                              &socket_addr_len);
+    sockets_fd[curr] =
+        accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
 
     if (sockets_fd[curr] == -1) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     }
-    in_port_t port_num = get_in_port((struct sockaddr *)&socket_addr[curr]);
-    void *msg = &port_num;
+
+    getnameinfo((struct sockaddr *)&socket_addr, socket_addr_len, hostArr,
+                sizeof(hostArr), portArr, sizeof(portArr), 0);
+
+    // in_port_t port_num = get_in_port((struct sockaddr *)&socket_addr);
+    string str1(hostArr);
+    string str2(portArr);
+    playerInfo[curr] = str1 + " " + str2;
+    void *msg = portArr;
     send(sockets_fd[curr], msg, 9, 0);
     cout << "Player " << curr << " is ready to play" << endl;
     curr++;
   }
-  cout << "All player are ready!" << endl;
+  sockets_fd[num_players] = sockets_fd[0];
+  for (int i = 0; i < num_players; i++) {
+    cout << "try to send " << playerInfo[i].c_str() << endl;
+    send(sockets_fd[i + 1], playerInfo[i].c_str(), 512, 0);
+  }
+  cout << "All player are ready! " << endl;
 
   return 0;
 }
