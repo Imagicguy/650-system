@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 using namespace std;
 
 in_port_t get_in_port(struct sockaddr *sa) {
@@ -78,7 +79,9 @@ int main(int argc, char *argv[]) {
   int curr = 0;
   char hostArr[NI_MAXHOST];
   char portArr[NI_MAXSERV];
-  string playerInfo[num_players];
+  string playerInfo;
+  // char *serverInfo[num_players];
+  vector<string> serverInfo;
   while (curr < num_players) {
     sockets_fd[curr] =
         accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
@@ -91,19 +94,22 @@ int main(int argc, char *argv[]) {
     getnameinfo((struct sockaddr *)&socket_addr, socket_addr_len, hostArr,
                 sizeof(hostArr), portArr, sizeof(portArr), 0);
 
-    // in_port_t port_num = get_in_port((struct sockaddr *)&socket_addr);
-    string str1(hostArr);
-    string str2(portArr);
-    playerInfo[curr] = str1 + " " + str2;
-    void *msg = portArr;
+    playerInfo = to_string(curr) + " " + to_string(num_players);
+    const char *msg = playerInfo.c_str();
     send(sockets_fd[curr], msg, 512, 0);
-    cout << "Player " << curr << " is ready to play" << endl;
+    char bufferInfo[512];
+    recv(sockets_fd[curr], bufferInfo, 512, 0);
+    serverInfo.push_back(bufferInfo);
+    cout << "get this from player: " << bufferInfo << endl;
+    // cout << "Player " << curr << " is ready to play" << endl;
     curr++;
   }
   sockets_fd[num_players] = sockets_fd[0];
   for (int i = 0; i < num_players; i++) {
-    cout << "try to send " << playerInfo[i].c_str() << endl;
-    send(sockets_fd[i + 1], playerInfo[i].c_str(), 512, 0);
+    string info = serverInfo.at(i);
+    const char *msg = info.c_str();
+    cout << "try to send " << msg << endl;
+    send(sockets_fd[i + 1], msg, 512, 0);
   }
   cout << "All player are ready! " << endl;
 
