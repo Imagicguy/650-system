@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
   // argv[1] = machine_name;
   // argv[2] = port_num;
   int status;
-  int socket_fd[3];
+  int socket_fd[4];
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
   const char *master_hostname = argv[1];
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
   }
 
   char *hostname_2 = inet_ntoa(*((struct in_addr *)aka->h_addr_list[0]));
-  int port2 = 10000;
+  int port2 = 20000;
   memset(&host_info_2, 0, sizeof(host_info_2));
 
   host_info_2.ai_family = AF_UNSPEC;
@@ -149,7 +149,8 @@ int main(int argc, char *argv[]) {
 
   send(socket_fd[0], msgs, 512, 0);
   // cout << "here?" << endl;
-
+  cout << "host is " << hostname_2 << endl;
+  cout << "Waiting for connection on port " << port_2 << endl;
   // get neighbor info from master
   char buffer1[512];
   recv(socket_fd[0], buffer1, 512, 0);
@@ -169,7 +170,17 @@ int main(int argc, char *argv[]) {
   memset(&host_info_3, 0, sizeof(host_info_3));
   host_info_3.ai_family = AF_UNSPEC;
   host_info_3.ai_socktype = SOCK_STREAM;
+  struct sockaddr_storage socket_addr;
+  socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
+  if (atoi(my_num) != 1) {
+    socket_fd[3] =
+        accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
 
+    if (socket_fd[3] == -1) {
+      cerr << "Error: cannot accept connection on socket" << endl;
+      return -1;
+    }
+  }
   status = getaddrinfo(hostname_3, port_3, &host_info_3, &host_info_list_3);
   if (status != 0) {
     cerr << "Error: cannot get address info for host" << endl;
@@ -197,6 +208,18 @@ int main(int argc, char *argv[]) {
     return -1;
   } else {
     cout << "connection succeed!" << endl;
+  }
+
+  if (atoi(my_num) == 1) {
+    char bufferInfo[512];
+    recv(socket_fd[2], bufferInfo, 512, 0);
+    socket_fd[3] =
+        accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
+
+    if (socket_fd[3] == -1) {
+      cerr << "Error: cannot accept connection on socket" << endl;
+      return -1;
+    }
   }
 
   freeaddrinfo(host_info_list);

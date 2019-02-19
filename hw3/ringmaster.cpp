@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     return -1;
   } // if
 
-  int yes = 1;
+  int yes = 0;
   status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
   status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
   if (status == -1) {
