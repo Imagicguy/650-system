@@ -111,6 +111,9 @@ int main(int argc, char *argv[]) {
     cout << "try to send " << msg << endl;
     send(sockets_fd[i + 1], msg, 512, 0);
   }
+  string mstr("it's your turn");
+  const char *msg = mstr.c_str();
+  send(sockets_fd[1], msg, 512, 0);
   cout << "All player are ready! " << endl;
 
   return 0;
