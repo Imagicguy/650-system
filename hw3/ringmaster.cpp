@@ -17,9 +17,6 @@ in_port_t get_in_port(struct sockaddr *sa) {
 }
 
 int main(int argc, char *argv[]) {
-  // argv[1] = port_num
-  // argv[2] = num_players
-  // argv[3] = num_hops
   if (argc != 4) {
     cout << "invalid input!" << endl;
     return -1;
@@ -115,6 +112,12 @@ int main(int argc, char *argv[]) {
   const char *msg = mstr.c_str();
   send(sockets_fd[1], msg, 512, 0);
   cout << "All player are ready! " << endl;
+  Game game(sockets_fd, num_players);
+  potato hot_potato;
+  if (num_hops > 0) {
+    game.start(num_hops);
+  }
+  game.over();
 
   return 0;
 }

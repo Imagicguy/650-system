@@ -18,6 +18,10 @@ int main(int argc, char *argv[]) {
   // argv[2] = port_num;
   int status;
   int socket_fd[4];
+  // 0: socket to master
+  // 1:player listen as server
+  // 2:connect to left'server
+  // 3:new socket created by accept for right
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
   const char *master_hostname = argv[1];
@@ -221,6 +225,11 @@ int main(int argc, char *argv[]) {
       return -1;
     }
   }
+
+  // 0: socket to master
+  // 1:player listen as server
+  // 2:connect to left'server
+  // 3:new socket created by accept for right
 
   freeaddrinfo(host_info_list);
   freeaddrinfo(host_info_list_2);
