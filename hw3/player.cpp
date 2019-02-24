@@ -13,63 +13,53 @@
 #include <unistd.h>
 using namespace std;
 
-int main(int argc, char *argv[]) {
-  // argv[1] = machine_name;
-  // argv[2] = port_num;
-  int status;
-  int socket_fd[4];
-  // 0: socket to master
-  // 1:player listen as server
-  // 2:connect to left'server
-  // 3:new socket created by accept for right
+int set_client(const char *hostname, const char *port) {
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
-  const char *master_hostname = argv[1];
-  const char *master_port = argv[2];
-
-  if (argc < 2) {
-    cout << "Syntax: client <hostname>\n" << endl;
-    return 1;
-  }
+  const char *master_hostname = hostname;
+  const char *master_port = port;
 
   memset(&host_info, 0, sizeof(host_info));
   host_info.ai_family = AF_UNSPEC;
   host_info.ai_socktype = SOCK_STREAM;
 
-  status =
-      getaddrinfo(master_hostname, master_port, &host_info, &host_info_list);
-  if (status != 0) {
+  if (getaddrinfo(master_hostname, master_port, &host_info, &host_info_list) !=
+      0) {
     cerr << "Error: cannot get address info for host" << endl;
     cerr << "  (" << master_hostname << "," << master_port << ")" << endl;
     return -1;
-  } // if
-
-  socket_fd[0] = socket(host_info_list->ai_family, host_info_list->ai_socktype,
-                        host_info_list->ai_protocol);
-  if (socket_fd[0] == -1) {
+  }
+  int socket_fd;
+  if ((socket_fd =
+           socket(host_info_list->ai_family, host_info_list->ai_socktype,
+                  host_info_list->ai_protocol)) == -1) {
     cerr << "Error: cannot create socket" << endl;
     cerr << "  (" << master_hostname << "," << master_port << ")" << endl;
     return -1;
-  } // if
+  }
 
   cout << "Connecting to " << master_hostname << " on port " << master_port
        << "..." << endl;
 
-  status = connect(socket_fd[0], host_info_list->ai_addr,
-                   host_info_list->ai_addrlen);
-  if (status == -1) {
+  if (connect(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen) ==
+      -1) {
     cerr << "Error: cannot connect to socket" << endl;
     cerr << "  (" << master_hostname << "," << master_port << ")" << endl;
     return -1;
   } else {
     cout << "connection succeed!" << endl;
   }
+  return socket_fd;
+}
 
+int set_server(string &hostname_2, string &port_2) {
   // start second socket -- server
   struct addrinfo host_info_2;
   struct addrinfo *host_info_list_2;
   char hostname_mch[NI_MAXHOST];
   struct hostent *aka;
+  int status;
+  int socket_fd;
   if (gethostname(hostname_mch, NI_MAXHOST) == -1) {
     perror("gethostname");
     exit(1);
@@ -80,7 +70,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  char *hostname_2 = inet_ntoa(*((struct in_addr *)aka->h_addr_list[0]));
+  hostname_2 = inet_ntoa(*((struct in_addr *)aka->h_addr_list[0]));
   int port2 = 20000;
   memset(&host_info_2, 0, sizeof(host_info_2));
 
@@ -89,8 +79,8 @@ int main(int argc, char *argv[]) {
   host_info_2.ai_flags = AI_PASSIVE;
 
   while (true) {
-    status = getaddrinfo(hostname_2, to_string(port2).c_str(), &host_info_2,
-                         &host_info_list_2);
+    status = getaddrinfo(hostname_2.c_str(), to_string(port2).c_str(),
+                         &host_info_2, &host_info_list_2);
     if (status != 0) {
       cerr << "ERROR: cannot addrinfo, error number: " << errno << endl;
       cerr << "  (" << hostname_2 << "," << to_string(port2).c_str() << ")"
@@ -98,19 +88,18 @@ int main(int argc, char *argv[]) {
       return -1;
     } // if
 
-    socket_fd[1] =
+    socket_fd =
         socket(host_info_list_2->ai_family, host_info_list_2->ai_socktype,
                host_info_list_2->ai_protocol);
-    if (socket_fd[1] == -1) {
+    if (socket_fd == -1) {
       cerr << "Error: cannot create socket" << endl;
       cerr << "  (" << hostname_2 << "," << to_string(port2).c_str() << ")"
            << endl;
       return -1;
     } // if
     int yes = 0;
-    status =
-        setsockopt(socket_fd[1], SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-    status = bind(socket_fd[1], host_info_list_2->ai_addr,
+    status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+    status = bind(socket_fd, host_info_list_2->ai_addr,
                   host_info_list_2->ai_addrlen);
     if (status == -1) {
       // cerr << "ERROR: cannot bind, error number: " << endl;
@@ -120,8 +109,8 @@ int main(int argc, char *argv[]) {
       break;
     }
   }
-  const char *port_2 = to_string(port2).c_str();
-  status = listen(socket_fd[1], 100);
+  port_2 = (char *)to_string(port2).c_str();
+  status = listen(socket_fd, 100);
   if (status == -1) {
     cerr << "Error: cannot listen on socket" << endl;
     cerr << "  (" << hostname_2 << "," << port_2 << ")" << endl;
@@ -130,6 +119,32 @@ int main(int argc, char *argv[]) {
 
   cout << "host is " << hostname_2 << endl;
   cout << "Waiting for connection on port " << port_2 << endl;
+}
+int main(int argc, char *argv[]) {
+  // int status;
+  int socket_fd[4];
+  // 0: socket to master
+  // 1:player listen as server
+  // 2:connect to left'server
+  // 3:new socket created by accept for right
+  if (argc < 2) {
+    cout << "Syntax: client <hostname>\n" << endl;
+    return 1;
+  }
+
+  socket_fd[0] = set_client(argv[1], argv[2]);
+  if (socket_fd[0] == 0)
+    perror("ERROR: FAILED ON FD[0]");
+  string my_host_s = "";
+  string my_port_s = "";
+  socket_fd[1] = set_server(my_host_s, my_port_s);
+  if (socket_fd[1] == 0)
+    perror("ERROR: FAILED ON FD[1]");
+  const char *my_host = my_host_s.c_str();
+  const char *my_port = my_port_s.c_str();
+
+  cout << "*my_host is " << my_host << endl;
+  cout << "my_port is " << my_port << endl;
 
   // connection succeed with master
   char buffer[512];
@@ -144,17 +159,15 @@ int main(int argc, char *argv[]) {
        << " total players " << endl;
 
   //  send server info to master
-  string str1(hostname_2);
-  string str2(port_2);
-  cout << "host is " << hostname_2 << endl;
-  cout << "Waiting for connection on port " << port_2 << endl;
+  string str1(my_host);
+  string str2(my_port);
+  cout << "my host is " << my_host << endl;
+  cout << "Im waiting for connection on port " << my_port << endl;
   string my_server_info = str1 + " " + str2;
   const char *msgs = my_server_info.c_str();
 
   send(socket_fd[0], msgs, 512, 0);
-  // cout << "here?" << endl;
-  cout << "host is " << hostname_2 << endl;
-  cout << "Waiting for connection on port " << port_2 << endl;
+
   // get neighbor info from master
   char buffer1[512];
   recv(socket_fd[0], buffer1, 512, 0);
@@ -163,88 +176,20 @@ int main(int argc, char *argv[]) {
   const char *hostname_3 = neighborInfo.substr(0, segment).c_str();
   const char *port_3 = neighborInfo.substr(segment + 1).c_str();
 
-  // start third socket -- client neighbor
-  struct addrinfo host_info_3;
-  struct addrinfo *host_info_list_3;
-  cout << "Im gonna connect to " << hostname_3 << " " << port_3 << endl;
+  socket_fd[2] = set_client(hostname_3, port_3);
+  if (socket_fd[2] == 0)
+    perror("ERROR: FAILED ON FD[2]");
 
-  memset(&host_info_3, 0, sizeof(host_info_3));
-  host_info_3.ai_family = AF_UNSPEC;
-  host_info_3.ai_socktype = SOCK_STREAM;
   struct sockaddr_storage socket_addr;
   socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
-  if (atoi(my_num) != -2) {
-    socket_fd[3] =
-        accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
 
-    if (socket_fd[3] == -1) {
-      cerr << "Error: cannot accept connection on socket" << endl;
-      return -1;
-    }
-  }
-  status = getaddrinfo(hostname_3, port_3, &host_info_3, &host_info_list_3);
-  if (status != 0) {
-    cerr << "Error: cannot get address info for host" << endl;
-    cerr << "  (" << hostname_3 << "," << port_3 << ")" << endl;
-    return -1;
-  } // if
+  socket_fd[3] =
+      accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
 
-  socket_fd[2] =
-      socket(host_info_list_3->ai_family, host_info_list_3->ai_socktype,
-             host_info_list_3->ai_protocol);
-  if (socket_fd[2] == -1) {
-    cerr << "Error: cannot create socket" << endl;
-    cerr << "  (" << hostname_3 << "," << port_3 << ")" << endl;
-    return -1;
-  } // if
-
-  cout << "Connecting to " << hostname_3 << " on port " << port_3 << "..."
-       << endl;
-
-  status = connect(socket_fd[2], host_info_list_3->ai_addr,
-                   host_info_list_3->ai_addrlen);
-  if (status == -1) {
-    cerr << "Error: cannot connect to socket " << errno << endl;
-    cerr << "  (" << hostname_3 << "," << port_3 << ")" << endl;
+  if (socket_fd[3] == -1) {
+    cerr << "Error: cannot accept connection on socket" << endl;
     return -1;
   } else {
-    cout << "connection succeed!" << endl;
+    cout << "Got!" << endl;
   }
-
-  /*if (atoi(my_num) == 1) {
-    char bufferInfo[512];
-    recv(socket_fd[2], bufferInfo, 512, 0);
-    socket_fd[3] =
-        accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
-
-    if (socket_fd[3] == -1) {
-      cerr << "Error: cannot accept connection on socket" << endl;
-      return -1;
-    }
-    }*/
-  char msg[] = "I'm ready";
-  if (send(socket_fd[0], msg, sizeof(msg), 0) == -1) {
-    perror("ERROR: IM READY");
-  }
-  // 0: socket to master
-  // 1:player listen as server
-  // 2:connect to left'server
-  // 3:new socket created by accept for right
-  vector<int> socket_list;
-  socket_list.push_back(socket_fd[0]);
-  socket_list.push_back(socket_fd[2]);
-  socket_list.push_back(socket_fd[3]);
-  socket_list.push_back(socket_fd[1]);
-  cout << my_num << " ready to play" << endl;
-  Game game(socket_list);
-  game.pass(atoi(my_num));
-  freeaddrinfo(host_info_list);
-  freeaddrinfo(host_info_list_2);
-  freeaddrinfo(host_info_list_3);
-  close(socket_fd[0]);
-  close(socket_fd[1]);
-  close(socket_fd[2]);
-
-  return 0;
 }
-//先建立两个socket,再发送建立Neighbor请求，得到neighbor地址后connect

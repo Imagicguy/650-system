@@ -1,5 +1,5 @@
 TARGETS=player ringmaster
-all: $(TARGETS)
+call: $(TARGETS)
 clean:
 	rm -f $(TARGETS)
 
