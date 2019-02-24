@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     char bufferInfo[512];
     recv(sockets_fd[curr], bufferInfo, 512, 0);
     serverInfo.push_back(bufferInfo);
-    cout << "get this from player: " << bufferInfo << endl;
+    // cout << "get this from player: " << bufferInfo << endl;
     // cout << "Player " << curr << " is ready to play" << endl;
     curr++;
   }
@@ -105,16 +105,32 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < num_players; i++) {
     string info = serverInfo.at(i);
     const char *msg = info.c_str();
-    cout << "try to send " << msg << endl;
+    // cout << "try to send " << msg << endl;
     send(sockets_fd[i + 1], msg, 512, 0);
   }
   string mstr("it's your turn");
   const char *msg = mstr.c_str();
   send(sockets_fd[1], msg, 512, 0);
+
+  char msg3[] = "I'm ready";
+  for (int i = 0; i < num_players; i++) {
+    if (recv(sockets_fd[i], msg3, sizeof(msg3), 0) == -1) {
+      perror("ERROR: 23");
+    }
+  }
   cout << "All player are ready! " << endl;
   Game game(sockets_fd, num_players);
   potato hot_potato;
+  hot_potato.is_cold = 0;
+  hot_potato.remain_hop = num_hops;
+  hot_potato.total_hop = num_hops;
+  srand((unsigned int)time(NULL));
+  int first = rand() % num_players;
+  if (send(sockets_fd[first], &hot_potato, sizeof(hot_potato), 0) == -1) {
+    perror("ERROR:SEND FIRST FAILED!");
+  }
   if (num_hops > 0) {
+    cout << "start now!" << endl;
     game.start(num_hops);
   }
   game.over();

@@ -31,12 +31,14 @@ public:
       client_fd.push_back(client[i]);
     }
   }
+  Game(vector<int> socket_fd) { client_fd = socket_fd; }
 
   void start(int num_hop) {
     hot_potato.is_cold = 0;
     hot_potato.total_hop = num_hop;
     hot_potato.remain_hop = num_hop;
     int recv_bytes;
+    bool isSelected = false;
     while (true) {
       FD_ZERO(&fds);
       for (vector<int>::iterator it = client_fd.begin(); it != client_fd.end();
@@ -44,7 +46,9 @@ public:
         FD_SET(*it, &fds);
       }
       int max = *max_element(client_fd.begin(), client_fd.end()) + 1;
+      cout << "running" << endl;
       if (select(max, &fds, NULL, NULL, NULL) > 0) {
+        cout << "find it in master!" << endl;
         for (vector<int>::iterator it = client_fd.begin();
              it != client_fd.end(); ++it) {
           if (FD_ISSET(*it, &fds) > 0) {
@@ -66,11 +70,60 @@ public:
           }
         }
       }
-      break; // master should only recv() one time
+      if (isSelected)
+        break; // master should only recv() one time
     }
   }
 
-  void passing(int num_hop) {}
+  void pass(int ID) {
+    int recv_bytes;
+    while (true) {
+      FD_ZERO(&fds);
+      for (vector<int>::iterator it = client_fd.begin();
+           it != client_fd.end() - 1; ++it) {
+        FD_SET(*it, &fds);
+      }
+      int max = *max_element(client_fd.begin(), client_fd.end() - 1) + 1;
+      if (select(max, &fds, NULL, NULL, NULL) > 0) {
+        for (vector<int>::iterator it = client_fd.begin();
+             it != client_fd.end() - 1; ++it) {
+          recv_bytes = recv(*it, &hot_potato, sizeof(hot_potato), 0);
+          if (recv_bytes == -1)
+            perror("ERROR: FAILED TO RECV()");
+        }
+      }
+      if (recv_bytes == 0 || hot_potato.is_cold == 1) {
+        for (vector<int>::iterator it = client_fd.begin();
+             it != client_fd.end(); ++it) {
+          close(*it);
+          break;
+        }
+      }
+      hot_potato.trace[hot_potato.total_hop - hot_potato.remain_hop] = ID;
+      sleep(2);
+      hot_potato.remain_hop--;
+      if (hot_potato.remain_hop == 0) { // it is it!
+        int send_bytes = send(client_fd[0], &hot_potato, sizeof(hot_potato), 0);
+        if (send_bytes == -1)
+          perror("ERROR : FAILED TO BE IT !");
+      } else { // keep passing to random neighbor
+        srand((unsigned int)time(NULL));
+        int isLeft = rand() % 2;
+        if (isLeft) {
+          if (send(client_fd[2], &hot_potato, sizeof(hot_potato), 0)) {
+            perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
+          }
+          cout << "Sending to " << ID - 1 << endl;
+        } else {
+          if (send(client_fd[3], &hot_potato, sizeof(hot_potato), 0)) {
+            perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
+          }
+          cout << "Sending to " << ID + 1 << endl;
+        }
+      }
+    }
+  }
+
   void over() {
     hot_potato.is_cold = 1;
     for (vector<int>::iterator it = client_fd.begin(); it != client_fd.end();

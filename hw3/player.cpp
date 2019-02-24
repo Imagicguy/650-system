@@ -163,10 +163,7 @@ int main(int argc, char *argv[]) {
   const char *hostname_3 = neighborInfo.substr(0, segment).c_str();
   const char *port_3 = neighborInfo.substr(segment + 1).c_str();
 
-  // const char *msg1 = "Im ready to accept";
-  // send(socket_fd[0], msg1, 512, 0);
   // start third socket -- client neighbor
-
   struct addrinfo host_info_3;
   struct addrinfo *host_info_list_3;
   cout << "Im gonna connect to " << hostname_3 << " " << port_3 << endl;
@@ -176,7 +173,7 @@ int main(int argc, char *argv[]) {
   host_info_3.ai_socktype = SOCK_STREAM;
   struct sockaddr_storage socket_addr;
   socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
-  if (atoi(my_num) != 1) {
+  if (atoi(my_num) != -2) {
     socket_fd[3] =
         accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
 
@@ -214,7 +211,7 @@ int main(int argc, char *argv[]) {
     cout << "connection succeed!" << endl;
   }
 
-  if (atoi(my_num) == 1) {
+  /*if (atoi(my_num) == 1) {
     char bufferInfo[512];
     recv(socket_fd[2], bufferInfo, 512, 0);
     socket_fd[3] =
@@ -224,13 +221,23 @@ int main(int argc, char *argv[]) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     }
+    }*/
+  char msg[] = "I'm ready";
+  if (send(socket_fd[0], msg, sizeof(msg), 0) == -1) {
+    perror("ERROR: IM READY");
   }
-
   // 0: socket to master
   // 1:player listen as server
   // 2:connect to left'server
   // 3:new socket created by accept for right
-
+  vector<int> socket_list;
+  socket_list.push_back(socket_fd[0]);
+  socket_list.push_back(socket_fd[2]);
+  socket_list.push_back(socket_fd[3]);
+  socket_list.push_back(socket_fd[1]);
+  cout << my_num << " ready to play" << endl;
+  Game game(socket_list);
+  game.pass(atoi(my_num));
   freeaddrinfo(host_info_list);
   freeaddrinfo(host_info_list_2);
   freeaddrinfo(host_info_list_3);
