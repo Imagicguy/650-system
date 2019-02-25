@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     }
   }
   cout << "All player are ready! " << endl;
-  Game game(sockets_fd, num_players);
+  Game game(sockets_fd, num_players, num_hops);
   potato hot_potato;
   hot_potato.is_cold = 0;
   hot_potato.remain_hop = num_hops;
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
   srand((unsigned int)time(NULL));
   int first = rand() % num_players;
   cout << "first is " << first << endl;
-  if (send(sockets_fd[first], &hot_potato, sizeof(hot_potato), 0) == -1) {
+  if (send(sockets_fd[first], &hot_potato, sizeof(potato), 0) == -1) {
     perror("ERROR:SEND FIRST FAILED!");
   }
   cout << "start now!" << endl;

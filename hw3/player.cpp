@@ -209,8 +209,13 @@ int main(int argc, char *argv[]) {
   // 1:player listen as server
   // 2:connect to left'server
   // 3:new socket created by accept for right
+  const char *msge = "Hello from neighbor ID ";
 
-  socket_list.push_back(socket_fd[0]);
+  send(socket_fd[2], msge, 512, 0);
+  send(socket_fd[3], msge, 512, 0);
+  char buffer4[512];
+  recv(socket_fd[0], buffer4, 512, 0);
+  char buffer5 socket_list.push_back(socket_fd[0]);
   socket_list.push_back(socket_fd[2]);
   socket_list.push_back(socket_fd[3]);
   socket_list.push_back(socket_fd[1]);
