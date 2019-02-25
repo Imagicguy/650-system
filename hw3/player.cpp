@@ -69,7 +69,7 @@ int set_server(string &hostname_2, string &port_2) {
     perror("gethostbyname");
     exit(1);
   }
-
+  cout << "hostname is " << hostname_2 << endl;
   hostname_2 = inet_ntoa(*((struct in_addr *)aka->h_addr_list[0]));
   int port2 = 20000;
   memset(&host_info_2, 0, sizeof(host_info_2));
@@ -91,7 +91,7 @@ int set_server(string &hostname_2, string &port_2) {
     socket_fd =
         socket(host_info_list_2->ai_family, host_info_list_2->ai_socktype,
                host_info_list_2->ai_protocol);
-    if (socket_fd == -1) {
+    if (socket_fd < 0) {
       cerr << "Error: cannot create socket" << endl;
       cerr << "  (" << hostname_2 << "," << to_string(port2).c_str() << ")"
            << endl;
@@ -109,6 +109,7 @@ int set_server(string &hostname_2, string &port_2) {
       break;
     }
   }
+  cout << "after while fd is " << socket_fd << endl;
   port_2 = (char *)to_string(port2).c_str();
   status = listen(socket_fd, 100);
   if (status == -1) {
@@ -119,12 +120,13 @@ int set_server(string &hostname_2, string &port_2) {
 
   cout << "host is " << hostname_2 << endl;
   cout << "Waiting for connection on port " << port_2 << endl;
+  return socket_fd;
 }
 int main(int argc, char *argv[]) {
   // int status;
   int socket_fd[4];
   // 0: socket to master
-  // 1:player listen as server
+  // 1:player accepter
   // 2:connect to left'server
   // 3:new socket created by accept for right
   if (argc < 2) {
@@ -138,12 +140,13 @@ int main(int argc, char *argv[]) {
   string my_host_s = "";
   string my_port_s = "";
   socket_fd[1] = set_server(my_host_s, my_port_s);
-  if (socket_fd[1] == 0)
+  cout << "out of function fd is  " << socket_fd[1] << endl;
+  if (socket_fd[1] < 0)
     perror("ERROR: FAILED ON FD[1]");
   const char *my_host = my_host_s.c_str();
   const char *my_port = my_port_s.c_str();
 
-  cout << "*my_host is " << my_host << endl;
+  cout << "my_host is " << my_host << endl;
   cout << "my_port is " << my_port << endl;
 
   // connection succeed with master
@@ -171,25 +174,49 @@ int main(int argc, char *argv[]) {
   // get neighbor info from master
   char buffer1[512];
   recv(socket_fd[0], buffer1, 512, 0);
+
   string neighborInfo(buffer1);
   size_t segment = neighborInfo.find(" ");
   const char *hostname_3 = neighborInfo.substr(0, segment).c_str();
   const char *port_3 = neighborInfo.substr(segment + 1).c_str();
-
+  cout << "connect to neighbor " << hostname_3 << " " << port_3 << endl;
   socket_fd[2] = set_client(hostname_3, port_3);
   if (socket_fd[2] == 0)
     perror("ERROR: FAILED ON FD[2]");
+
+  char buffer3[512];
+  recv(socket_fd[0], buffer3, 512, 0);
+  cout << "my turn? " << buffer3 << endl;
 
   struct sockaddr_storage socket_addr;
   socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
 
   socket_fd[3] =
       accept(socket_fd[1], (struct sockaddr *)&socket_addr, &socket_addr_len);
-
+  cout << "fd[1] is " << socket_fd[1] << endl;
+  cout << "fd[2] is " << socket_fd[2] << endl;
+  cout << "fd[3] is " << socket_fd[3] << endl;
   if (socket_fd[3] == -1) {
-    cerr << "Error: cannot accept connection on socket" << endl;
+    cerr << "ERROR: cannot accept connection , error number: " << errno << endl;
     return -1;
   } else {
     cout << "Got!" << endl;
   }
+
+  vector<int> socket_list;
+
+  // 0: socket to master
+  // 1:player listen as server
+  // 2:connect to left'server
+  // 3:new socket created by accept for right
+
+  socket_list.push_back(socket_fd[0]);
+  socket_list.push_back(socket_fd[2]);
+  socket_list.push_back(socket_fd[3]);
+  socket_list.push_back(socket_fd[1]);
+  cout << my_num << " ready to play" << endl;
+  Game game(socket_list);
+  game.pass(atoi(my_num));
+
+  return 0;
 }

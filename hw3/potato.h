@@ -47,12 +47,22 @@ public:
       }
       int max = *max_element(client_fd.begin(), client_fd.end()) + 1;
       cout << "running" << endl;
-      if (select(max, &fds, NULL, NULL, NULL) > 0) {
-        cout << "find it in master!" << endl;
+      struct timeval tv;
+      tv.tv_sec = 10;
+      tv.tv_usec = 500000;
+      int rv;
+      if ((rv = select(max, &fds, NULL, NULL, &tv)) == -1) {
+        perror("select");
+      } else if (rv == 0) {
+        cout << "Timeout occurred! No data after 10.5 seconds" << endl;
+      } else {
+        cout << "change detected in master!" << endl;
+        isSelected = true;
         for (vector<int>::iterator it = client_fd.begin();
              it != client_fd.end(); ++it) {
           if (FD_ISSET(*it, &fds) > 0) {
-            recv_bytes = recv(*it, &hot_potato, sizeof(hot_potato), 0);
+            recv_bytes =
+                recv(*it, &hot_potato, sizeof(hot_potato), MSG_WAITALL);
             if (recv_bytes == -1)
               perror("ERROR: FAILED TO RECV()");
 
@@ -62,16 +72,16 @@ public:
                 printf("%d,", hot_potato.trace[i]);
               }
               printf("%d \n", hot_potato.trace[num_hop - 1]);
-              break;
+              return;
             } else {
               perror("OH,this potato is still hot!");
-              break;
+              return;
             } // master should not get info before hop == 0
           }
         }
       }
       if (isSelected)
-        break; // master should only recv() one time
+        return; // master should only recv() one time
     }
   }
 
@@ -83,42 +93,54 @@ public:
            it != client_fd.end() - 1; ++it) {
         FD_SET(*it, &fds);
       }
+      struct timeval tv;
+      tv.tv_sec = 10;
+      tv.tv_usec = 500000;
+      int rv;
       int max = *max_element(client_fd.begin(), client_fd.end() - 1) + 1;
-      if (select(max, &fds, NULL, NULL, NULL) > 0) {
+      if ((rv = select(max, &fds, NULL, NULL, &tv)) == -1) {
+        perror("select");
+      } else if (rv == 0) {
+        cout << "Timeout occurred! No data after 10.5 seconds" << endl;
+      } else {
         for (vector<int>::iterator it = client_fd.begin();
              it != client_fd.end() - 1; ++it) {
-          recv_bytes = recv(*it, &hot_potato, sizeof(hot_potato), 0);
-          if (recv_bytes == -1)
-            perror("ERROR: FAILED TO RECV()");
-        }
-      }
-      if (recv_bytes == 0 || hot_potato.is_cold == 1) {
-        for (vector<int>::iterator it = client_fd.begin();
-             it != client_fd.end(); ++it) {
-          close(*it);
-          break;
-        }
-      }
-      hot_potato.trace[hot_potato.total_hop - hot_potato.remain_hop] = ID;
-      sleep(2);
-      hot_potato.remain_hop--;
-      if (hot_potato.remain_hop == 0) { // it is it!
-        int send_bytes = send(client_fd[0], &hot_potato, sizeof(hot_potato), 0);
-        if (send_bytes == -1)
-          perror("ERROR : FAILED TO BE IT !");
-      } else { // keep passing to random neighbor
-        srand((unsigned int)time(NULL));
-        int isLeft = rand() % 2;
-        if (isLeft) {
-          if (send(client_fd[2], &hot_potato, sizeof(hot_potato), 0)) {
-            perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
+          if (FD_ISSET(*it, &fds) > 0) {
+            recv_bytes =
+                recv(*it, &hot_potato, sizeof(hot_potato), MSG_WAITALL);
+            if (recv_bytes == -1)
+              perror("ERROR: FAILED TO RECV()");
           }
-          cout << "Sending to " << ID - 1 << endl;
-        } else {
-          if (send(client_fd[3], &hot_potato, sizeof(hot_potato), 0)) {
-            perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
+        }
+        if (recv_bytes == 0 || hot_potato.is_cold == 1) {
+          for (vector<int>::iterator it = client_fd.begin();
+               it != client_fd.end(); ++it) {
+            close(*it);
+            return;
           }
-          cout << "Sending to " << ID + 1 << endl;
+        }
+        hot_potato.trace[hot_potato.total_hop - hot_potato.remain_hop] = ID;
+        sleep(2);
+        hot_potato.remain_hop--;
+        if (hot_potato.remain_hop == 0) { // it is it!
+          int send_bytes =
+              send(client_fd[0], &hot_potato, sizeof(hot_potato), 0);
+          if (send_bytes == -1)
+            perror("ERROR : FAILED TO BE IT !");
+        } else { // keep passing to random neighbor
+          srand((unsigned int)time(NULL));
+          int isLeft = rand() % 2;
+          if (isLeft) {
+            if (send(client_fd[2], &hot_potato, sizeof(hot_potato), 0)) {
+              perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
+            }
+            cout << "Sending to " << ID - 1 << endl;
+          } else {
+            if (send(client_fd[3], &hot_potato, sizeof(hot_potato), 0)) {
+              perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
+            }
+            cout << "Sending to " << ID + 1 << endl;
+          }
         }
       }
     }
@@ -134,60 +156,5 @@ public:
     }
   }
 };
-int serverSocket(const char *hostname, const char *port) {
-
-  int status = 0;
-  int socket_fd = 0;
-  struct addrinfo host_info;
-  struct addrinfo *host_info_list;
-
-  memset(&host_info, 0, sizeof(host_info));
-  host_info.ai_family = AF_UNSPEC;
-  host_info.ai_socktype = SOCK_STREAM;
-  host_info.ai_flags = AI_PASSIVE;
-  cout << hostname << endl;
-  cout << port << endl;
-
-  status = getaddrinfo(hostname, port, &host_info, &host_info_list);
-  if (status != 0) {
-    cerr << "Error: cannot get address info for host" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  } // if
-
-  socket_fd = socket(host_info_list->ai_family, host_info_list->ai_socktype,
-                     host_info_list->ai_protocol);
-  if (socket_fd == -1) {
-    cerr << "Error: cannot create socket" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  } // if
-  return socket_fd;
-}
-int clientSocket(char *hostname, char *port, struct addrinfo *host_info,
-                 struct addrinfo *host_info_list) {
-  int status = 0;
-  int socket_fd = 0;
-  host_info_list = NULL;
-
-  status = getaddrinfo(hostname, port, host_info, &host_info_list);
-  if (status != 0) {
-    cerr << "Error: cannot get address info for host" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  } // if
-
-  socket_fd = socket(host_info_list->ai_family, host_info_list->ai_socktype,
-                     host_info_list->ai_protocol);
-  if (socket_fd == -1) {
-    cerr << "Error: cannot create socket" << endl;
-    cerr << "  (" << hostname << "," << port << ")" << endl;
-    return -1;
-  } // if
-
-  cout << "Connecting to " << hostname << " on port " << port << "..." << endl;
-  return socket_fd;
-}
-class player {};
 
 #endif

@@ -108,13 +108,17 @@ int main(int argc, char *argv[]) {
     // cout << "try to send " << msg << endl;
     send(sockets_fd[i + 1], msg, 512, 0);
   }
-  string mstr("it's your turn");
-  const char *msg = mstr.c_str();
-  send(sockets_fd[1], msg, 512, 0);
+
+  for (int i = 0; i < num_players; i++) {
+    string mstr("it's your turn");
+
+    // cout << "try to send " << msg << endl;
+    send(sockets_fd[i + 1], mstr.c_str(), 512, 0);
+  }
 
   char msg3[] = "I'm ready";
   for (int i = 0; i < num_players; i++) {
-    if (recv(sockets_fd[i], msg3, sizeof(msg3), 0) == -1) {
+    if (send(sockets_fd[i], msg3, sizeof(msg3), 0) == -1) {
       perror("ERROR: 23");
     }
   }
@@ -126,11 +130,12 @@ int main(int argc, char *argv[]) {
   hot_potato.total_hop = num_hops;
   srand((unsigned int)time(NULL));
   int first = rand() % num_players;
+  cout << "first is " << first << endl;
   if (send(sockets_fd[first], &hot_potato, sizeof(hot_potato), 0) == -1) {
     perror("ERROR:SEND FIRST FAILED!");
   }
+  cout << "start now!" << endl;
   if (num_hops > 0) {
-    cout << "start now!" << endl;
     game.start(num_hops);
   }
   game.over();
