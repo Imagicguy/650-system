@@ -71,8 +71,6 @@ public:
             recv_bytes = recv(*it, &hot_potato, sizeof(potato), 0);
             if (recv_bytes < 0)
               perror("ERROR: FAILED TO RECV()");
-            if (recv_bytes == 0)
-              cout << "end of file" << endl;
 
             if (hot_potato.remain_hop == 0) {
               cout << "Trace of potato" << endl;
@@ -122,15 +120,8 @@ public:
 
           if (FD_ISSET(*it, &fds) > 0) {
 
-            cout << "before recv" << hot_potato.remain_hop << endl;
             recv_bytes = recv(*it, &hot_potato, sizeof(potato), 0);
-            // cout << "wtf is " << (char)hot_potato << endl;
-            // char buffe[50000];
-            // recv_bytes = recv(*it, buffe, 50000, 0);
-            // cout << "wtf is " << buffe << endl;
-            cout << "after recv" << hot_potato.remain_hop << endl;
-            if (recv_bytes == 0)
-              cout << "end of file" << endl;
+
             if (recv_bytes == -1)
               perror("ERROR: FAILED TO RECV()");
           }
