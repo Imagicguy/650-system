@@ -22,8 +22,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  // int num_players = atoi(argv[2]);
   int num_players = atoi(argv[2]);
-  int num_hops = atoi(argv[1]);
+  int num_hops = atoi(argv[3]);
   int status;
   int socket_fd;
   struct addrinfo host_info;
@@ -118,7 +119,7 @@ int main(int argc, char *argv[]) {
 
   char msg3[] = "I'm ready";
   for (int i = 0; i < num_players; i++) {
-    if (send(sockets_fd[i], msg3, sizeof(msg3), 0) == -1) {
+    if (send(sockets_fd[i], msg3, 512, 0) == -1) {
       perror("ERROR: 23");
     }
   }
@@ -128,10 +129,11 @@ int main(int argc, char *argv[]) {
   hot_potato.is_cold = 0;
   hot_potato.remain_hop = num_hops;
   hot_potato.total_hop = num_hops;
+  cout << "num to hop is " << hot_potato.remain_hop << endl;
   srand((unsigned int)time(NULL));
   int first = rand() % num_players;
   cout << "first is " << first << endl;
-  if (send(sockets_fd[first], &hot_potato, sizeof(potato), 0) == -1) {
+  if (send(sockets_fd[1], &hot_potato, sizeof(potato), 0) == -1) {
     perror("ERROR:SEND FIRST FAILED!");
   }
   cout << "start now!" << endl;
