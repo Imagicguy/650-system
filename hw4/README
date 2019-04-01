@@ -1,0 +1,5 @@
+To run this program,you will need to install Boost on Ubuntu.
+To install boost,you need command: sudo apt-get install libboost-all-dev
+
+For extra point part,you will run /test to create the database first,then type in  "python3 extra.py"
+to run extra part

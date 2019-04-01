@@ -58,10 +58,8 @@ public:
       tv.tv_sec = 10;
       tv.tv_usec = 500000;
       int rv;
-      if ((rv = select(max, &fds, NULL, NULL, &tv)) == -1) {
+      if ((rv = select(max, &fds, NULL, NULL, NULL)) == -1) {
         perror("select");
-      } else if (rv == 0) {
-        cout << "Timeout occurred! No data after 10.5 seconds" << endl;
       } else {
 
         isSelected = true;
@@ -73,7 +71,7 @@ public:
               perror("ERROR: FAILED TO RECV()");
 
             if (hot_potato.remain_hop == 0) {
-              cout << "Trace of potato" << endl;
+              cout << "Trace of potato:" << endl;
               for (int j = 0; j < num_hop - 1; j++) {
                 printf("%d,", hot_potato.trace[j]);
               }
@@ -91,7 +89,7 @@ public:
     }
   }
 
-  void pass(int ID) {
+  void pass(int ID, int num_players) {
     potato hot_potato;
     hot_potato.total_hop = 22;
     hot_potato.remain_hop = 21;
@@ -109,10 +107,8 @@ public:
 
       int max = *max_element(client_fd.begin(), client_fd.end() - 1) + 1;
 
-      if ((rv = select(max, &fds, NULL, NULL, &tv)) == -1) {
+      if ((rv = select(max, &fds, NULL, NULL, NULL)) == -1) {
         perror("select");
-      } else if (rv == 0) {
-        cout << "Timeout occurred! No data after 10.5 seconds" << endl;
       } else {
 
         for (vector<int>::iterator it = client_fd.begin();
@@ -120,7 +116,13 @@ public:
 
           if (FD_ISSET(*it, &fds) > 0) {
 
+            // cout << "before recv" << hot_potato.remain_hop << endl;
             recv_bytes = recv(*it, &hot_potato, sizeof(potato), 0);
+            // cout << "wtf is " << (char)hot_potato << endl;
+            // char buffe[50000];
+            // recv_bytes = recv(*it, buffe, 50000, 0);
+            // cout << "wtf is " << buffe << endl;
+            //     cout << "after recv" << hot_potato.remain_hop << endl;
 
             if (recv_bytes == -1)
               perror("ERROR: FAILED TO RECV()");
@@ -135,7 +137,7 @@ public:
           }
         }
         hot_potato.trace[hot_potato.total_hop - hot_potato.remain_hop] = ID;
-        sleep(2);
+        sleep(1);
         hot_potato.remain_hop--;
         if (hot_potato.remain_hop == 0) { // it is it!
           int send_bytes = send(client_fd[0], &hot_potato, sizeof(potato), 0);
@@ -143,20 +145,23 @@ public:
             perror("ERROR : FAILED TO BE IT !");
           cout << "I'm it" << endl;
         } else { // keep passing to random neighbor
-          srand((unsigned int)time(NULL));
+          srand((unsigned int)time(NULL) + ID);
           int isLeft = rand() % 2;
-          if (isLeft) {
-            int bytes = send(client_fd[2], &hot_potato, sizeof(potato), 0);
+          if (isLeft == 1) {
+            // cout <<  "nanshou " client_fd[2] << endl;
+            int bytes = send(client_fd[1], &hot_potato, sizeof(potato), 0);
             if (bytes < 0) {
               perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
             }
-            cout << "Sending to " << ID - 1 << endl;
+            int offset = ID == 0 ? num_players : ID;
+            cout << "Sending potato to " << offset - 1 << endl;
           } else {
             int bytes = send(client_fd[2], &hot_potato, sizeof(potato), 0);
             if (bytes < 0) {
               perror("ERROR: FAILED TO SEND TO LEFT NEIGHBOR");
             }
-            cout << "Sending to " << ID + 1 << endl;
+            int offset = ID == num_players - 1 ? -1 : ID;
+            cout << "Sending potato to " << offset + 1 << endl;
           }
         }
       }

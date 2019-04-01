@@ -27,9 +27,8 @@ int main(int argc, char *argv[]) {
   int num_hops = atoi(argv[3]);
   int status;
   int socket_fd;
-
   cout << "Potato Ringmaster" << endl;
-  cout << "Player = " << num_players << endl;
+  cout << "Players = " << num_players << endl;
   cout << "Hops = " << num_hops << endl;
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
@@ -80,7 +79,7 @@ int main(int argc, char *argv[]) {
   char hostArr[NI_MAXHOST];
   char portArr[NI_MAXSERV];
   string playerInfo;
-
+  // char *serverInfo[num_players];
   vector<string> serverInfo;
   while (curr < num_players) {
     sockets_fd[curr] =
@@ -90,28 +89,32 @@ int main(int argc, char *argv[]) {
       cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     }
-    cout << "Player " << curr << " is ready to play" << endl;
+
     getnameinfo((struct sockaddr *)&socket_addr, socket_addr_len, hostArr,
                 sizeof(hostArr), portArr, sizeof(portArr), 0);
-
+    cout << "Player " << curr << " is ready to play" << endl;
     playerInfo = to_string(curr) + " " + to_string(num_players);
     const char *msg = playerInfo.c_str();
     send(sockets_fd[curr], msg, 512, 0);
     char bufferInfo[512];
     recv(sockets_fd[curr], bufferInfo, 512, 0);
     serverInfo.push_back(bufferInfo);
+    // cout << "get this from player: " << bufferInfo << endl;
+    // cout << "Player " << curr << " is ready to play" << endl;
     curr++;
   }
   sockets_fd[num_players] = sockets_fd[0];
   for (int i = 0; i < num_players; i++) {
     string info = serverInfo.at(i);
     const char *msg = info.c_str();
+    // cout << "try to send " << msg << endl;
     send(sockets_fd[i + 1], msg, 512, 0);
   }
 
   for (int i = 0; i < num_players; i++) {
     string mstr("it's your turn");
 
+    // cout << "try to send " << msg << endl;
     send(sockets_fd[i + 1], mstr.c_str(), 512, 0);
   }
 
@@ -130,12 +133,12 @@ int main(int argc, char *argv[]) {
 
   srand((unsigned int)time(NULL));
   int first = rand() % num_players;
-  cout << "Ready to start game,sending potato to player " << first << endl;
-  if (send(sockets_fd[first], &hot_potato, sizeof(potato), 0) == -1) {
-    perror("ERROR:SEND FIRST FAILED!");
-  }
 
   if (num_hops > 0) {
+    cout << "Ready to start game,sending potato to player " << first << endl;
+    if (send(sockets_fd[first], &hot_potato, sizeof(potato), 0) == -1) {
+      perror("ERROR:SEND FIRST FAILED!");
+    }
     game.start(num_hops);
   }
   game.over();

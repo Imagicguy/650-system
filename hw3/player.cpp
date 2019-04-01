@@ -43,6 +43,7 @@ int set_client(const char *hostname, const char *port) {
     cerr << "Error: cannot connect to socket" << endl;
     cerr << "  (" << master_hostname << "," << master_port << ")" << endl;
     return -1;
+  } else {
   }
   return socket_fd;
 }
@@ -64,6 +65,7 @@ int set_server(string &hostname_2, string &port_2) {
     perror("gethostbyname");
     exit(1);
   }
+
   hostname_2 = inet_ntoa(*((struct in_addr *)aka->h_addr_list[0]));
   int port2 = 20000;
   memset(&host_info_2, 0, sizeof(host_info_2));
@@ -103,6 +105,7 @@ int set_server(string &hostname_2, string &port_2) {
       break;
     }
   }
+
   port_2 = (char *)to_string(port2).c_str();
   status = listen(socket_fd, 100);
   if (status == -1) {
@@ -152,6 +155,7 @@ int main(int argc, char *argv[]) {
   //  send server info to master
   string str1(my_host);
   string str2(my_port);
+
   string my_server_info = str1 + " " + str2;
   const char *msgs = my_server_info.c_str();
 
@@ -172,6 +176,7 @@ int main(int argc, char *argv[]) {
 
   char buffer3[512];
   recv(socket_fd[0], buffer3, 512, 0);
+  //  cout << "my turn? " << buffer3 << endl;
 
   struct sockaddr_storage socket_addr;
   socklen_t socket_addr_len = sizeof(struct sockaddr_storage);
@@ -182,6 +187,7 @@ int main(int argc, char *argv[]) {
   if (socket_fd[3] == -1) {
     cerr << "ERROR: cannot accept connection , error number: " << errno << endl;
     return -1;
+  } else {
   }
 
   vector<int> socket_list;
@@ -191,13 +197,21 @@ int main(int argc, char *argv[]) {
   // 2:connect to left'server
   // 3:new socket created by accept for right
 
+  /*send(socket_fd[2], msge, 512, 0);
+    send(socket_fd[3], msge, 512, 0);*/
+  char buffer4[512];
+  int bytes = recv(socket_fd[0], buffer4, 512, MSG_WAITALL);
+  // cout << "buffer size is " << bytes << endl;
+  /*char buffer5[512];
+  recv(socket_fd[3], buffer5, 512, 0);
+  cout << "buffer is " << buffer5 << endl;*/
   socket_list.push_back(socket_fd[0]);
   socket_list.push_back(socket_fd[2]);
   socket_list.push_back(socket_fd[3]);
   socket_list.push_back(socket_fd[1]);
 
   Game game(socket_list);
-  game.pass(atoi(my_num));
+  game.pass(atoi(my_num), atoi(total_num));
 
   return 0;
 }
