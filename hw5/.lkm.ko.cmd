@@ -1,1 +1,0 @@
-cmd_/home/hw210/ece650/hw5/lkm.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/hw210/ece650/hw5/lkm.ko /home/hw210/ece650/hw5/lkm.o /home/hw210/ece650/hw5/lkm.mod.o ;  true
