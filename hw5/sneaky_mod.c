@@ -28,6 +28,8 @@ struct linux_dirent {
   char d_name[1];
 };
 
+MODULE_LICENSE("GPL");
+
 void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff810707b0;
 void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81070730;
 
