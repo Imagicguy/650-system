@@ -1,0 +1,1 @@
+(define-package "rtags" "20190320.1517" "A front-end for rtags" 'nil :commit "0ad18c30fdae55b43948778adc267ece20c869bf" :authors '(("Jan Erik Hanssen" . "jhanssen@gmail.com") ("Anders Bakken" . "agbakken@gmail.com")) :maintainer '("Jan Erik Hanssen" . "jhanssen@gmail.com") :url "http://rtags.net")
