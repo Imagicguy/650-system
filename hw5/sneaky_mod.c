@@ -18,6 +18,7 @@
 #define SNEAKY_MODULE_SIZE (sizeof(SNEAKY_MODULE) - 1)
 #define REAL_PWD "/etc/passwd"
 #define FAKE_PWD "/tmp/passwd"
+
 #define handle_error(msg)                                                      \
   do {                                                                         \
     perror(msg);                                                               \
