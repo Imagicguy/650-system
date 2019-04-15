@@ -122,3 +122,19 @@ emacs sneaky_mod.c
 git add -A
 git commit -m "fix"
 git push
+ls
+ls hw5/
+lsmod
+ls /proc/
+ps -a -u hw210
+lsmod
+cd hw5/
+ls
+lsmod
+cat /etc/passwd
+ls
+ls /proc/
+lsmod
+ls
+lsmod
+sudo ./sneaky_process 
