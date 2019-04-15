@@ -108,3 +108,17 @@ ls'
 ls
 emacs Makefile 
 make
+ls
+cd hw5/
+ls
+git pull
+ls
+emacs sneaky_mod.c 
+make
+sudo apt-get install gcc
+make
+ls
+emacs sneaky_mod.c 
+git add -A
+git commit -m "fix"
+git push

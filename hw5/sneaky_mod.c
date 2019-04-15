@@ -26,10 +26,11 @@ struct linux_dirent {
   char d_name[1];
 };
 
-static char *sneaky_pid = "00000000";
+static char *sneaky_pid = "0000000000000000";
 module_param(sneaky_pid, charp,
              S_IWUSR | S_IRUSR | S_IXUSR | S_IRGRP | S_IROTH);
 
+MODULE_PARM_DESC(sneaky_pid, "sneaky_process pid");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Haili Wu");
 MODULE_DESCRIPTION("You can not see me.");

